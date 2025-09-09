@@ -42,9 +42,16 @@ declare module '@mastra/libsql' {
 
 declare module '@mastra/memory' {
   export class Memory {
-    constructor();
+    constructor(config?: {
+      storage?: any;
+      vector?: any;
+      embedder?: any;
+      options?: any;
+    });
     set(key: string, value: any): void;
     get(key: string): any;
+    updateWorkingMemory?(params: any): Promise<any>;
+    getWorkingMemory?(params: any): Promise<any>;
   }
 }
 

@@ -140,103 +140,111 @@ export const zapierAiQuery = createTool({
 
 export const searchFAQDatabase = createTool({
   id: "searchFAQDatabase",
-  description: "Search FAQ database for questions and answers related to user query",
+  description: "Search the FAQ database for relevant questions and answers",
   inputSchema: z.object({
-    query: z.string().describe("User's search query for FAQ"),
+    keywords: z.string().describe("Keywords to search for in FAQ"),
   }),
   outputSchema: z.object({
     success: z.boolean(),
-    results: z.array(z.object({
+    data: z.array(z.object({
       question: z.string(),
       answer: z.string(),
-      url: z.string(),
-    })).optional(),
+      url: z.string().optional(),
+    })),
     message: z.string(),
   }),
-  execute: async ({ context }: { context: { query: string } }) => {
-    const { query } = context;
+  execute: async ({ context }: { context: any }) => {
+    const { keywords } = context;
 
     try {
-      // Search FAQ worksheet using Zapier MCP with partial matching
-      // Fetch a broader range and filter client-side for partial matching
-      const result = await zapierMcp.callTool("google_sheets_get_many_spreadsheet_rows_advanced", {
-        instructions: `Get all rows from FAQ worksheet for local partial search. Include columns A:Z and return raw rows if possible.`,
+      console.log(`🔍 Searching FAQ for: "${keywords}"`);
+      
+      // Get all FAQ entries to search locally for partial matches
+      const allFAQResult = await zapierMcp.callTool("google_sheets_get_many_spreadsheet_rows_advanced", {
+        instructions: `Get all FAQ entries for local search`,
         worksheet: "FAQ",
         row_count: "500",
         range: "A:Z",
         output_format: "json"
       });
-
-      // Parse the results and filter for partial matches
-      let allFaqResults: Array<{question: string; answer: string; url: string}> = [];
       
-      if (result && result.results) {
-        try {
-          // Handle the MCP response structure
-          const results = result.results;
+      console.log("🔍 FAQ Search Result:", JSON.stringify(allFAQResult, null, 2));
+
+      if (allFAQResult && allFAQResult.content && allFAQResult.content[0] && allFAQResult.content[0].text) {
+        const parsedContent = JSON.parse(allFAQResult.content[0].text);
+        
+        // Handle different result structures
+        let faqRows = [];
+        
+        // Structure 1: Direct numeric keyed object with raw_rows
+        if (parsedContent["0"] && parsedContent["0"].raw_rows) {
+          console.log("🔍 [DEBUG] Found structure 1: numeric keyed object with raw_rows");
+          const rawRows = JSON.parse(parsedContent["0"].raw_rows);
+          faqRows = rawRows.map((row: any[]) => ({
+            "COL$A": row[0] || "",
+            "COL$B": row[1] || "",
+            "COL$C": row[2] || "",
+            "COL$D": row[3] || ""
+          }));
+        }
+        // Structure 2: Results array with formatted_rows
+        else if (parsedContent.results && parsedContent.results[0] && parsedContent.results[0].formatted_rows) {
+          console.log("🔍 [DEBUG] Found structure 2: results array with formatted_rows");
+          faqRows = parsedContent.results[0].formatted_rows;
+        }
+        // Structure 3: Results array with raw_rows (this is the actual structure we're getting)
+        else if (parsedContent.results && parsedContent.results[0] && parsedContent.results[0].raw_rows) {
+          console.log("🔍 [DEBUG] Found structure 3: results array with raw_rows");
+          const rawRows = JSON.parse(parsedContent.results[0].raw_rows);
+          faqRows = rawRows.map((row: any[]) => ({
+            "COL$A": row[0] || "",
+            "COL$B": row[1] || "",
+            "COL$C": row[2] || "",
+            "COL$D": row[3] || ""
+          }));
+        }
+        
+        console.log("🔍 [DEBUG] Processed FAQ rows:", faqRows.length, "items");
+        
+        // Search locally for partial matches (case-insensitive)
+        const searchTerms = keywords.toLowerCase().split(' ');
+        const matchingFAQs = faqRows.filter((row: any) => {
+          const questionText = (row["COL$B"] || "").toLowerCase(); // Question is in column B
+          const answerText = (row["COL$C"] || "").toLowerCase();   // Answer is in column C
           
-          // Check if results is an array and contains raw_rows
-          if (Array.isArray(results) && results.length > 0) {
-            const firstResult = results[0];
-            if (firstResult && typeof firstResult.raw_rows === "string") {
-              // Parse the raw_rows JSON string
-              const rawRows = JSON.parse(firstResult.raw_rows);
-              if (Array.isArray(rawRows)) {
-                for (const row of rawRows) {
-                  if (Array.isArray(row) && row.length >= 4) {
-                    // All rows are data rows, no header to skip
-                    allFaqResults.push({
-                      question: String(row[1] || ""), // Col B - Question
-                      answer: String(row[2] || ""),   // Col C - Answer
-                      url: String(row[3] || ""),      // Col D - URL
-                    });
-                  }
-                }
-              }
-            }
-          }
-        } catch (parseError) {
-          console.log("Failed to parse FAQ results:", parseError);
+          // Check if any search term matches in question or answer
+          return searchTerms.some((term: string) => 
+            questionText.includes(term) || answerText.includes(term)
+          );
+        });
+        
+        console.log("🔍 [DEBUG] Matching FAQs:", matchingFAQs.length, "items");
+        
+        if (matchingFAQs.length > 0) {
+          return {
+            success: true,
+            data: matchingFAQs.map((item: any) => ({
+              question: item["COL$B"] || '',
+              answer: item["COL$C"] || '',
+              url: item["COL$D"] || ''
+            })),
+            message: `Found ${matchingFAQs.length} relevant FAQ entries`
+          };
         }
       }
-
-      // Filter results for partial matching (case-insensitive, Japanese-friendly)
-      const queryLower = query.toLowerCase();
-      const faqResults = allFaqResults.filter((item: any) => {
-        const questionLower = item.question.toLowerCase();
-        const answerLower = item.answer.toLowerCase();
-        
-        // Direct match
-        if (questionLower.includes(queryLower) || answerLower.includes(queryLower)) {
-          return true;
-        }
-        
-        // Handle Japanese-English mapping for error codes
-        if (queryLower.includes('error') && queryLower.includes('90')) {
-          return questionLower.includes('エラー90') || answerLower.includes('エラー90');
-        }
-        if (queryLower.includes('エラー') && queryLower.includes('90')) {
-          return questionLower.includes('error90') || answerLower.includes('error90') ||
-                 questionLower.includes('error 90') || answerLower.includes('error 90');
-        }
-        
-        return false;
-      });
-
-      return {
-        success: true,
-        results: faqResults,
-        message: faqResults.length > 0 
-          ? `Found ${faqResults.length} FAQ result(s) for "${query}"`
-          : `No FAQ results found for "${query}"`
-      };
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      console.error("FAQ search error:", error);
+      
       return {
         success: false,
-        results: [],
-        message: `FAQ search failed: ${errorMessage}`
+        data: [],
+        message: "No FAQ data found for the given keywords"
+      };
+      
+    } catch (error: any) {
+      console.error("FAQ search error:", error);
+      return { 
+        success: false, 
+        data: [], 
+        message: `FAQ search failed: ${error.message}` 
       };
     }
   },

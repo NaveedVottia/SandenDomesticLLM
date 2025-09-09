@@ -15,18 +15,18 @@ console.log("LANGFUSE_HOST:", process.env.LANGFUSE_HOST ? "✅ Set" : "❌ Missi
 console.log("LANGFUSE_PUBLIC_KEY:", process.env.LANGFUSE_PUBLIC_KEY ? "✅ Set" : "❌ Missing");
 console.log("LANGFUSE_SECRET_KEY:", process.env.LANGFUSE_SECRET_KEY ? "✅ Set" : "❌ Missing");
 
-// Import all agents (customer-identification is now async)
-import { agentPromise as customerAgentPromise } from "./agents/sanden/customer-identification.js";
+// Import all agents (customer-identification is now synchronous)
+import { routingAgentCustomerIdentification } from "./agents/sanden/customer-identification.js";
 import { repairAgentProductSelection } from "./agents/sanden/product-selection.js";
 import { repairQaAgentIssueAnalysis } from "./agents/sanden/issue-analysis.js";
 import { repairVisitConfirmationAgent } from "./agents/sanden/visit-confirmation.js";
 
-// Create agents asynchronously
+// Create agents synchronously
 async function createMastraInstance() {
   console.log("🔄 Creating Mastra instance with agents...");
 
-  // Wait for customer identification agent to initialize
-  const customerAgent = await customerAgentPromise;
+  // Customer identification agent is now synchronous
+  const customerAgent = routingAgentCustomerIdentification;
   console.log("✅ Customer identification agent initialized");
 
   const mastra = new Mastra({

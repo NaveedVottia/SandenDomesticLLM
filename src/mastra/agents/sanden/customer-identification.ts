@@ -6,37 +6,38 @@ import { orchestratorTools } from "../../tools/sanden/orchestrator-tools.js";
 import { repairTools } from "../../tools/sanden/repair-tools.js";
 import { memoryTools } from "../../tools/sanden/memory-tools.js";
 import { z } from "zod";
-import { sharedMastraMemory, createMemoryIds, storeCustomerData } from "../../shared-memory.js";
+import { sharedMastraMemory, createMemoryIds, storeCustomerData, getCustomerData } from "../../shared-memory.js";
 import { loadLangfusePrompt } from "../../prompts/langfuse.js";
+import { Langfuse } from "langfuse";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// Initialize agent with async prompt loading
-let routingAgentCustomerIdentification: Agent;
+// Load environment variables FIRST before any Langfuse operations
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, "../../../../server.env") });
 
-async function initializeAgent() {
-  const instructions = await loadLangfusePrompt("customer-identification", { cacheTtlMs: 0, label: "production" });
-  console.log(`🔍 [DEBUG] Customer identification prompt loaded: ${instructions ? '✅ Success' : '❌ Failed'}`);
-
-  routingAgentCustomerIdentification = new Agent({
-    name: "customer-identification",
-    description: "サンデン・リテールシステム修理受付AI , 顧客識別エージェント",
-    instructions: instructions,
-    model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0", {
-      temperature: 0.1,
-      maxTokens: 1000,
-    }),
-    tools: {
-      // Re-enable all tools with fixed schemas
-      ...commonTools,
-      ...customerTools,
-      delegateTo: enhancedDelegateTo,
-      lookupCustomerFromDatabase: enhancedLookupCustomerFromDatabase,
-      directRepairHistory: directRepairHistoryTool,
-    },
-    memory: sharedMastraMemory, // Re-enable shared memory
+// Load instructions from Langfuse synchronously first
+let REPAIR_AGENT_INSTRUCTIONS = "";
+try {
+  const langfuse = new Langfuse({
+    publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+    secretKey: process.env.LANGFUSE_SECRET_KEY,
+    baseUrl: process.env.LANGFUSE_HOST,
   });
-
-  return routingAgentCustomerIdentification;
+  const promptClient = await langfuse.getPrompt("customer-identification", undefined, { cacheTtlSeconds: 0 });
+  if (promptClient?.prompt?.trim()) {
+    REPAIR_AGENT_INSTRUCTIONS = promptClient.prompt.trim();
+    console.log(`[Langfuse] ✅ Loaded customer-identification prompt via SDK (v${promptClient.version})`);
+  } else {
+    console.warn(`[Langfuse] ⚠️ No prompt available for customer-identification`);
+  }
+} catch (error) {
+  console.error("[Langfuse] Failed to load customer-identification prompt:", error);
 }
+
+// Agent will be created after tool definitions
 
 // Debug logging
 console.log("🔍 Customer Identification Agent Configuration:");
@@ -73,6 +74,7 @@ const directRepairHistoryTool = {
   description: "Get repair history directly without delegation",
   inputSchema: z.object({
     customerId: z.string().optional().describe("Customer ID to get repair history for"),
+    sessionId: z.string().optional().describe("Session ID for memory lookup"),
   }),
   outputSchema: z.object({
     success: z.boolean(),
@@ -80,13 +82,33 @@ const directRepairHistoryTool = {
     message: z.string(),
   }),
   execute: async (args: any) => {
-    const { customerId } = args.input || args.context || {};
+    let { customerId, sessionId } = args.input || args.context || {};
+    
+    // If customerId is not provided, try to get it from shared memory
+    if (!customerId) {
+      try {
+        // Use the provided sessionId or try common session IDs
+        const sessionIdsToTry = sessionId ? [sessionId] : ['default', 'current', 'session'];
+        
+        for (const sid of sessionIdsToTry) {
+          const memIds = createMemoryIds(sid);
+          const customerData = await getCustomerData(memIds);
+          if (customerData && customerData.customerId) {
+            customerId = customerData.customerId;
+            console.log(`🔍 [DEBUG] Retrieved customer ID from memory: ${customerId} (session: ${sid})`);
+            break;
+          }
+        }
+      } catch (error) {
+        console.log(`❌ [DEBUG] Error getting customer ID from memory:`, error);
+      }
+    }
     
     if (!customerId) {
       return {
         success: false,
         data: null,
-        message: "顧客IDが必要です。",
+        message: "顧客IDが見つかりません。先に顧客情報を確認してください。",
       };
     }
     
@@ -125,8 +147,9 @@ const enhancedLookupCustomerFromDatabase = {
       try {
         const customerData = result.customerData;
         
-        // Create memory IDs for this session
-        const memIds = createMemoryIds(`session-${Date.now()}`, customerData.customerId);
+        // Create memory IDs for this session using a consistent session ID
+        const sessionId = `session-${customerData.customerId}`;
+        const memIds = createMemoryIds(sessionId, customerData.customerId);
         
         // Store customer data using the proper shared memory functions
         await storeCustomerData(memIds, customerData);
@@ -147,13 +170,37 @@ const enhancedLookupCustomerFromDatabase = {
   }
 };
 
-// Initialize the agent asynchronously
-const agentPromise = initializeAgent();
+// Create agent with instructions loaded from Langfuse
+export const routingAgentCustomerIdentification = new Agent({
+  name: "customer-identification",
+  description: "サンデン・リテールシステム修理受付AI , 顧客識別エージェント",
+  instructions: REPAIR_AGENT_INSTRUCTIONS,
+  model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0", {
+    temperature: 0.1,
+    maxTokens: 1000,
+    region: process.env.AWS_REGION || "ap-northeast-1",
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  }),
+  tools: {
+    // Re-enable all tools with fixed schemas
+    ...commonTools,
+    ...customerTools,
+    delegateTo: enhancedDelegateTo,
+    lookupCustomerFromDatabase: enhancedLookupCustomerFromDatabase,
+    directRepairHistory: directRepairHistoryTool,
+  },
+  memory: sharedMastraMemory, // Re-enable shared memory
+});
 
-// Export the agent initialization function and promise
-export { agentPromise, initializeAgent, sharedMastraMemory };
+function initializeAgent() {
+  return routingAgentCustomerIdentification;
+}
 
-// Export the agent as a promise for compatibility
-export const getRoutingAgentCustomerIdentification = () => agentPromise;
+// Export the agent and initialization function
+export { initializeAgent, sharedMastraMemory };
+
+// Export the agent directly for compatibility
+export const getRoutingAgentCustomerIdentification = () => routingAgentCustomerIdentification;
 
 console.log("✅ Customer Identification Agent module loaded");

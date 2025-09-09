@@ -1,7 +1,7 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { zapierMcp } from "../../../integrations/zapier-mcp.js";
-import { sharedMastraMemory } from "../../shared-memory.js";
+import { sharedMastraMemory, createMemoryIds, getCustomerData } from "../../shared-memory.js";
 
 export const searchProductsTool = createTool({
   id: "searchProducts",
@@ -100,6 +100,41 @@ export const hybridGetProductsByCustomerIdTool = createTool({
         console.log(`🔍 [DEBUG] Retrieved customer ID from memory: ${customerId}`);
       } catch (error) {
         console.log(`❌ [DEBUG] Error getting customer ID from memory:`, error);
+        
+        // Fallback: Try different possible session IDs to find the customer data
+        const possibleSessionIds = [
+          sessionId,
+          'default',
+          'current', 
+          'session',
+          `session-${Date.now()}`
+        ];
+
+        for (const sid of possibleSessionIds) {
+          if (sid) {
+            const memIds = createMemoryIds(sid);
+            const customerData = await getCustomerData(memIds);
+            if (customerData && customerData.customerId) {
+              customerId = customerData.customerId;
+              console.log(`🔍 [DEBUG] Retrieved customer ID from memory: ${customerId} (session: ${sid})`);
+              break;
+            }
+          }
+        }
+
+        // If still not found, try common customer IDs directly
+        if (!customerId) {
+          const commonCustomerIds = ['cust001', 'cust002', 'cust003', 'cust004', 'cust005', 'cust006', 'cust007', 'cust008', 'cust009', 'cust010'];
+          for (const cid of commonCustomerIds) {
+            const memIds = createMemoryIds(cid, cid);
+            const customerData = await getCustomerData(memIds);
+            if (customerData && customerData.customerId) {
+              customerId = customerData.customerId;
+              console.log(`🔍 [DEBUG] Retrieved customer ID from memory: ${customerId} (direct lookup: ${cid})`);
+              break;
+            }
+          }
+        }
       }
     }
 

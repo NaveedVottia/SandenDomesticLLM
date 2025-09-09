@@ -18,14 +18,33 @@ function getEnv(name: string): string | undefined {
 
 function getClient(): Langfuse | null {
   if (langfuseClient) return langfuseClient;
+
   const publicKey = getEnv("LANGFUSE_PUBLIC_KEY");
   const secretKey = getEnv("LANGFUSE_SECRET_KEY");
   const baseUrl = getEnv("LANGFUSE_HOST");
 
-  if (!publicKey || !secretKey || !baseUrl) return null;
+  console.log(`[Langfuse] Debug - publicKey: ${publicKey ? 'present' : 'missing'} (${publicKey?.length || 0} chars)`);
+  console.log(`[Langfuse] Debug - secretKey: ${secretKey ? 'present' : 'missing'} (${secretKey?.length || 0} chars)`);
+  console.log(`[Langfuse] Debug - baseUrl: ${baseUrl || 'missing'}`);
 
-  langfuseClient = new Langfuse({ publicKey, secretKey, baseUrl });
-  return langfuseClient;
+  if (!publicKey || !secretKey || !baseUrl) {
+    console.error(`[Langfuse] Missing required environment variables`);
+    return null;
+  }
+
+  try {
+    console.log(`[Langfuse] Initializing client with baseUrl: ${baseUrl}`);
+    langfuseClient = new Langfuse({
+      publicKey,
+      secretKey,
+      baseUrl: baseUrl.replace(/\/$/, '') // Remove trailing slash if present
+    });
+    console.log(`[Langfuse] Client initialized successfully`);
+    return langfuseClient;
+  } catch (error) {
+    console.error(`[Langfuse] Client initialization failed:`, error);
+    return null;
+  }
 }
 
 export async function loadLangfusePrompt(
@@ -45,17 +64,49 @@ export async function loadLangfusePrompt(
   }
 
   try {
-    // SDK handles internal caching; expose configurable TTL
-    const ttlSeconds = Math.max(1, Math.floor(cacheTtlMs / 1000));
-    const promptClient = await client.getPrompt(name, undefined, { cacheTtlSeconds: ttlSeconds });
-    const text = promptClient?.prompt ?? "";
+    console.log(`[Langfuse] Attempting to fetch prompt: ${name}`);
+
+    // Try different SDK method signatures for compatibility
+    let promptClient;
+    let text = "";
+
+    try {
+      // Method 1: Try with version parameter (SDK v2.x)
+      promptClient = await client.getPrompt(name, undefined, { cacheTtlSeconds: 60 });
+      text = promptClient?.prompt ?? "";
+      console.log(`[Langfuse] Method 1 succeeded: ${text.length} chars`);
+    } catch (method1Error) {
+      console.warn(`[Langfuse] Method 1 failed:`, method1Error instanceof Error ? method1Error.message : String(method1Error));
+
+      try {
+        // Method 2: Try without version parameter
+        promptClient = await client.getPrompt(name);
+        text = promptClient?.prompt ?? "";
+        console.log(`[Langfuse] Method 2 succeeded: ${text.length} chars`);
+      } catch (method2Error) {
+        console.warn(`[Langfuse] Method 2 failed:`, method2Error instanceof Error ? method2Error.message : String(method2Error));
+
+        try {
+          // Method 3: Try without label parameter (label is not a valid parameter for getPrompt)
+          promptClient = await client.getPrompt(name);
+          text = promptClient?.prompt ?? "";
+          console.log(`[Langfuse] Method 3 succeeded: ${text.length} chars`);
+        } catch (method3Error) {
+          console.warn(`[Langfuse] Method 3 failed:`, method3Error instanceof Error ? method3Error.message : String(method3Error));
+          throw new Error(`All Langfuse SDK methods failed for prompt: ${name}`);
+        }
+      }
+    }
+
     if (text) {
       promptCache[cacheKey] = { content: text, fetchedAt: Date.now() };
-      console.log(`[Langfuse] ✅ Loaded prompt via SDK: ${name} (v${promptClient.version})`);
+      console.log(`[Langfuse] ✅ Loaded prompt via SDK: ${name} (${text.length} chars)`);
       return text;
+    } else {
+      console.warn(`[Langfuse] ⚠️ Empty prompt content for ${name}`);
     }
   } catch (err) {
-    console.warn(`[Langfuse] Prompt fetch failed for ${name}:`, err);
+    console.error(`[Langfuse] Prompt fetch failed for ${name}:`, err instanceof Error ? err.message : String(err));
   }
 
   // Return empty string so caller can decide fallback behavior

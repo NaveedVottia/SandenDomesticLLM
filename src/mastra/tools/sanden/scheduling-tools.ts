@@ -1,10 +1,10 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { zapierMcp } from "../../../integrations/zapier-mcp.js";
-import { sharedMastraMemory } from "../../shared-memory.js";
+import { sharedMastraMemory, createMemoryIds, getCustomerData } from "../../shared-memory.js";
 
 export const createSchedulingEntry = createTool({
-  id: "google_sheets_create_spreadsheet_row",
+  id: "google_sheets_create_spreadsheet_row_at_top",
   description: "Create a new scheduling entry in Google Sheets",
   inputSchema: z.object({
     customerId: z.string().optional(),
@@ -55,15 +55,27 @@ export const createSchedulingEntry = createTool({
             customerId, storeName, email, phone, location
           });
         } else {
-          // Fallback to shared memory
-          customerId = sharedMastraMemory.get("customerId");
-          storeName = sharedMastraMemory.get("storeName");
-          email = sharedMastraMemory.get("email");
-          phone = sharedMastraMemory.get("phone");
-          location = sharedMastraMemory.get("location");
-          console.log(`🔍 [DEBUG] Retrieved customer data from shared memory:`, {
-            customerId, storeName, email, phone, location
-          });
+          // Fallback to shared memory using proper functions
+          try {
+            const commonCustomerIds = ['cust001', 'cust002', 'cust003', 'cust004', 'cust005', 'cust006', 'cust007', 'cust008', 'cust009', 'cust010'];
+            for (const cid of commonCustomerIds) {
+              const memIds = createMemoryIds(cid, cid);
+              const customerData = await getCustomerData(memIds);
+              if (customerData && customerData.customerId) {
+                customerId = customerData.customerId;
+                storeName = customerData.storeName;
+                email = customerData.email;
+                phone = customerData.phone;
+                location = customerData.location;
+                console.log(`🔍 [DEBUG] Retrieved customer data from shared memory:`, {
+                  customerId, storeName, email, phone, location
+                });
+                break;
+              }
+            }
+          } catch (error) {
+            console.log(`❌ [DEBUG] Error getting customer data from shared memory:`, error);
+          }
         }
         
         if (customerId) {

@@ -1,9 +1,17 @@
 import { Memory } from "@mastra/memory";
+import { LibSQLStore } from "@mastra/libsql";
 
-// Create a shared memory instance - storage will be configured at Mastra level
-export const sharedMastraMemory = new Memory();
+// Simple in-memory storage for customer data (temporary solution)
+const customerMemory = new Map<string, any>();
 
-console.log("✅ Created shared Mastra Memory instance");
+// Create a shared memory instance with proper storage configuration
+export const sharedMastraMemory = new Memory({
+  storage: new LibSQLStore({
+    url: "file:./mastra.db", // Same database as main Mastra instance
+  }),
+});
+
+console.log("✅ Created shared Mastra Memory instance with LibSQL storage");
 
 // Helper functions for memory management using legacy approach
 export const createMemoryIds = (sessionId: string, customerId?: string) => {
@@ -16,22 +24,23 @@ export const createMemoryIds = (sessionId: string, customerId?: string) => {
   };
 };
 
-// Store customer data in memory using proper Mastra Memory API
+// Store customer data in memory using simple Map storage
 export const storeCustomerData = async (memIds: { resource: string; thread: string }, customerData: any) => {
   try {
-    // Store customer data using simple key-value pairs
-    await sharedMastraMemory.set("customerId", customerData.customerId);
-    await sharedMastraMemory.set("storeName", customerData.storeName);
-    await sharedMastraMemory.set("email", customerData.email);
-    await sharedMastraMemory.set("phone", customerData.phone);
-    await sharedMastraMemory.set("location", customerData.location);
-    await sharedMastraMemory.set("lastInteraction", new Date().toISOString());
-    await sharedMastraMemory.set("currentAgent", "customer-identification");
-    await sharedMastraMemory.set("sessionStart", new Date().toISOString());
-    await sharedMastraMemory.set("resourceId", memIds.resource);
-    await sharedMastraMemory.set("threadId", memIds.thread);
+    // Use simple Map storage
+    const key = `customer_${memIds.resource}`;
+    customerMemory.set(key, {
+      customerId: customerData.customerId,
+      storeName: customerData.storeName,
+      email: customerData.email,
+      phone: customerData.phone,
+      location: customerData.location,
+      lastInteraction: new Date().toISOString(),
+      currentAgent: "customer-identification",
+      sessionStart: new Date().toISOString()
+    });
     
-    console.log(`🔍 [Memory] Stored customer data for resource: ${memIds.resource}, thread: ${memIds.thread}`);
+    console.log(`🔍 [Memory] Stored customer data for key: ${key}`);
     return true;
   } catch (error) {
     console.error(`❌ [Memory] Error storing customer data:`, error);
@@ -39,36 +48,19 @@ export const storeCustomerData = async (memIds: { resource: string; thread: stri
   }
 };
 
-// Get customer data from memory using proper Mastra Memory API
+// Get customer data from memory using simple Map storage
 export const getCustomerData = async (memIds: { resource: string; thread: string }) => {
   try {
-    // Get customer data using simple key-value pairs
-    const customerId = await sharedMastraMemory.get("customerId");
-    const storeName = await sharedMastraMemory.get("storeName");
-    const email = await sharedMastraMemory.get("email");
-    const phone = await sharedMastraMemory.get("phone");
-    const location = await sharedMastraMemory.get("location");
-    const lastInteraction = await sharedMastraMemory.get("lastInteraction");
-    const currentAgent = await sharedMastraMemory.get("currentAgent");
-    const sessionStart = await sharedMastraMemory.get("sessionStart");
+    // Use simple Map storage
+    const key = `customer_${memIds.resource}`;
+    const customerData = customerMemory.get(key);
     
-    if (customerId) {
-      const customerData = {
-        customerId,
-        storeName,
-        email,
-        phone,
-        location,
-        lastInteraction,
-        currentAgent,
-        sessionStart
-      };
-      
-      console.log(`🔍 [Memory] Retrieved customer data for resource: ${memIds.resource}`);
+    if (customerData && customerData.customerId) {
+      console.log(`🔍 [Memory] Retrieved customer data for key: ${key}`);
       return customerData;
     }
     
-    console.log(`🔍 [Memory] No customer data found for resource: ${memIds.resource}`);
+    console.log(`🔍 [Memory] No customer data found for key: ${key}`);
     return null;
   } catch (error) {
     console.error(`❌ [Memory] Error getting customer data:`, error);
@@ -79,8 +71,22 @@ export const getCustomerData = async (memIds: { resource: string; thread: string
 // Update current agent in memory
 export const updateCurrentAgent = async (memIds: { resource: string; thread: string }, agentName: string) => {
   try {
-    await sharedMastraMemory.set("currentAgent", agentName);
-    await sharedMastraMemory.set("lastInteraction", new Date().toISOString());
+    // Get current working memory and update agent info (with type assertion)
+    const currentMemory = await (sharedMastraMemory as any).getWorkingMemory({
+      resourceId: memIds.resource,
+      threadId: memIds.thread
+    });
+    
+    await (sharedMastraMemory as any).updateWorkingMemory({
+      resourceId: memIds.resource,
+      threadId: memIds.thread,
+      workingMemory: {
+        ...currentMemory,
+        currentAgent: agentName,
+        lastInteraction: new Date().toISOString()
+      }
+    });
+    
     console.log(`🔍 [Memory] Updated current agent to: ${agentName}`);
     return true;
   } catch (error) {
@@ -92,14 +98,12 @@ export const updateCurrentAgent = async (memIds: { resource: string; thread: str
 // Clear customer memory
 export const clearCustomerMemory = async (memIds: { resource: string; thread: string }) => {
   try {
-    const keysToClear = [
-      "customerId", "storeName", "email", "phone", "location",
-      "lastInteraction", "currentAgent", "sessionStart", "resourceId", "threadId"
-    ];
-    
-    for (const key of keysToClear) {
-      await sharedMastraMemory.set(key, null);
-    }
+    // Clear working memory by setting it to empty object (with type assertion)
+    await (sharedMastraMemory as any).updateWorkingMemory({
+      resourceId: memIds.resource,
+      threadId: memIds.thread,
+      workingMemory: {}
+    });
     
     console.log(`🔍 [Memory] Cleared customer memory for resource: ${memIds.resource}`);
     return true;

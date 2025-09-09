@@ -157,7 +157,7 @@ const orchestratorStep = createStep({
             修理ID: `REP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             日時: new Date().toISOString(),
             製品ID: "PROD001", // Placeholder
-            顧客ID: "CUST001", // Placeholder
+            顧客ID: inputData.customerId || "UNKNOWN", // Use actual customer ID from input
             問題内容: "Workflow completed",
             ステータス: "完了",
             訪問要否: "不要",

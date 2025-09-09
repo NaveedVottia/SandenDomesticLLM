@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
+import { config } from 'dotenv';
 import { loadLangfusePrompt } from './src/mastra/prompts/langfuse.ts';
+
+// Load environment variables from server.env
+config({ path: './server.env' });
 
 // Test Langfuse prompt loading
 async function testLangfusePrompts() {

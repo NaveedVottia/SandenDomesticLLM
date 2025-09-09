@@ -1,46 +1,47 @@
-import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
+import dotenv from 'dotenv';
+import { Langfuse } from 'langfuse';
 
-// Load environment variables from server.env
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, "server.env") });
+dotenv.config({ path: 'server.env' });
 
-console.log("🔍 Environment Variables Status:");
-console.log("LANGFUSE_HOST:", process.env.LANGFUSE_HOST ? "✅ Set" : "❌ Missing");
-console.log("LANGFUSE_PUBLIC_KEY:", process.env.LANGFUSE_PUBLIC_KEY ? "✅ Set" : "❌ Missing");
-console.log("LANGFUSE_SECRET_KEY:", process.env.LANGFUSE_SECRET_KEY ? "✅ Set" : "❌ Missing");
+const client = new Langfuse({
+  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+  secretKey: process.env.LANGFUSE_SECRET_KEY,
+  baseUrl: process.env.LANGFUSE_HOST
+});
 
-if (process.env.LANGFUSE_HOST && process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY) {
-  console.log("✅ All Langfuse environment variables are set!");
-  
-  // Test Langfuse connection
+async function testPrompts() {
   try {
-    const { Langfuse } = await import("langfuse");
-    const langfuse = new Langfuse({ 
-      publicKey: process.env.LANGFUSE_PUBLIC_KEY, 
-      secretKey: process.env.LANGFUSE_SECRET_KEY, 
-      baseUrl: process.env.LANGFUSE_HOST 
-    });
+    console.log('Testing available prompts...');
+    console.log('Environment check:');
+    console.log('LANGFUSE_PUBLIC_KEY:', process.env.LANGFUSE_PUBLIC_KEY ? 'present' : 'missing');
+    console.log('LANGFUSE_SECRET_KEY:', process.env.LANGFUSE_SECRET_KEY ? 'present' : 'missing');
+    console.log('LANGFUSE_HOST:', process.env.LANGFUSE_HOST || 'missing');
     
-    console.log("✅ Langfuse client created successfully");
-    
-    // Try to fetch a prompt using the same method as the agent
+    // Try to get the customer-identification prompt
     try {
-      const promptClient = await langfuse.getPrompt("orchestrator", undefined, { cacheTtlSeconds: 1 });
-      console.log("✅ Prompt fetched successfully:", promptClient ? "Has data" : "No data");
-      if (promptClient) {
-        console.log("Prompt content length:", promptClient.prompt?.length || 0);
-        console.log("Prompt version:", promptClient.version);
+      const prompt = await client.getPrompt('customer-identification');
+      console.log('customer-identification prompt found:', !!prompt);
+      console.log('Content length:', prompt?.prompt?.length || 0);
+      if (prompt?.prompt) {
+        console.log('First 200 chars:', prompt.prompt.substring(0, 200));
       }
-    } catch (promptError) {
-      console.error("❌ Error fetching prompt:", promptError.message);
+    } catch (error) {
+      console.log('customer-identification prompt error:', error.message);
     }
     
+    // Try other known prompts
+    const knownPrompts = ['repair-scheduling', 'repair-agent', 'repair-history-ticket', 'error-messages'];
+    for (const promptName of knownPrompts) {
+      try {
+        const prompt = await client.getPrompt(promptName);
+        console.log(promptName + ' prompt found:', !!prompt, 'length:', prompt?.prompt?.length || 0);
+      } catch (error) {
+        console.log(promptName + ' prompt error:', error.message);
+      }
+    }
   } catch (error) {
-    console.error("❌ Error creating Langfuse client:", error.message);
+    console.error('General error:', error.message);
   }
-} else {
-  console.log("❌ Missing required Langfuse environment variables");
 }
+
+testPrompts();
