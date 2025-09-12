@@ -1,0 +1,38 @@
+[
+  {
+    "model": "karakuri",
+    "success": false,
+    "totalTime": 183,
+    "conversation": []
+  },
+  {
+    "model": "tsuzumi",
+    "success": false,
+    "totalTime": 5,
+    "conversation": []
+  },
+  {
+    "model": "plamo",
+    "success": false,
+    "totalTime": 64,
+    "conversation": []
+  },
+  {
+    "model": "nova_micro",
+    "success": false,
+    "totalTime": 4,
+    "conversation": []
+  },
+  {
+    "model": "nova_pro",
+    "success": false,
+    "totalTime": 5,
+    "conversation": []
+  },
+  {
+    "model": "claude_sonnet",
+    "success": false,
+    "totalTime": 4,
+    "conversation": []
+  }
+]

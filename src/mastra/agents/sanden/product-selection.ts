@@ -1,0 +1,43 @@
+import { Agent } from "@mastra/core/agent";
+import { Memory } from "@mastra/memory";
+import { bedrock } from "@ai-sdk/amazon-bedrock";
+import { productTools } from "../../tools/sanden/product-tools";
+import { customerTools } from "../../tools/sanden/customer-tools";
+import { commonTools } from "../../tools/sanden/common-tools";
+import { memoryTools } from "../../tools/sanden/memory-tools";
+import { orchestratorTools } from "../../tools/sanden/orchestrator-tools";
+import { loadLangfusePrompt } from "../../prompts/langfuse";
+import { langfuse } from "../../../integrations/langfuse";
+import { sharedMemory } from "./customer-identification";
+
+export const repairAgentProductSelection = new Agent({
+  name: "Domestic-repair-agent",
+  description: "サンデン・リテールシステム修理受付AI , 製品選択エージェント",
+   
+  // Instructions will be populated from Langfuse at runtime
+  instructions: "",
+  
+  model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+  tools: {
+    ...productTools,
+    ...customerTools,
+    ...commonTools,
+    ...memoryTools, // Add memory tools
+    delegateTo: orchestratorTools.delegateTo, // Add delegateTo tool
+  },
+  memory: sharedMemory, // Use shared memory
+});
+
+// Bind prompt from Langfuse
+(async () => {
+  try {
+    const instructions = await loadLangfusePrompt("Domestic-repair-agent", { label: "production" });
+    if (instructions) {
+      // Use the correct method to update instructions
+      (repairAgentProductSelection as any).__updateInstructions(instructions);
+      console.log(`[Langfuse] ✅ Loaded prompt via SDK: Domestic-repair-agent`);
+    }
+  } catch (error) {
+    console.error("[Langfuse] Failed to load Domestic-repair-agent prompt:", error);
+  }
+})();

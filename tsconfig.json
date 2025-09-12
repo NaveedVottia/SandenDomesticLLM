@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": false,
+    "outDir": "dist",
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ]
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "src/list-zapier-tools.ts",
+    "src/print-zapier-oauth-url.ts",
+    "src/mastra/workflows/sanden/repair-intake-orchestrated.ts",
+    "src/mastra/workflows/sanden/simple-test.ts",
+    "src/mastra/workflows/sanden/test-orchestrator.ts"
+  ]
+}
