@@ -354,16 +354,56 @@ export const getCustomerHistory = createTool({
 
       // Deterministic formatted output to prevent hallucination
       if (writer && limited.length) {
-        let out = `顧客ID ${customerId} の修理履歴 (最大${limited.length}件)\n`;
+        let out = `顧客ID ${customerId} の修理履歴 (最大${limited.length}件)\n\n`;
+
+        // Format each repair record with proper line breaks
         limited.forEach((it, idx) => {
-          out += `\n${idx + 1}. 修理ID: ${it.repairId}\n   日付: ${it.date}\n   製品ID: ${it.productId}\n   問題: ${it.issue}\n   状態: ${it.status}\n   優先度: ${it.priority}\n   担当者: ${it.handler}`;
+          out += `${idx + 1}. 修理ID: ${it.repairId}\n`;
+          out += `   日時: ${it.date}\n`;
+          out += `   問題内容: ${it.issue} ステータス: ${it.status}\n`;
+          out += `   優先度: ${it.priority}\n`;
+          out += `   対応者: ${it.handler}\n`;
+          out += `   訪問修理: ${it.visitRequired}\n\n`;
         });
+
+        // Send the entire formatted block as one chunk
         try { writer.write(out); } catch {}
+      }
+
+      if (limited.length) {
+        let out = `顧客ID ${customerId} の修理履歴 (最大${limited.length}件)\n\n`;
+
+        // Format each repair record as a complete block
+        limited.forEach((it, idx) => {
+          out += `${idx + 1}. 修理ID: ${it.repairId}\n`;
+          out += `   日時: ${it.date}\n`;
+          out += `   問題内容: ${it.issue} ステータス: ${it.status}\n`;
+          out += `   優先度: ${it.priority}\n`;
+          out += `   対応者: ${it.handler}\n`;
+          out += `   訪問修理: ${it.visitRequired}\n\n`;
+        });
+
+        // Send the complete formatted output directly to the UI
+        if (writer) {
+          try {
+            writer.write(out);
+          } catch {}
+        }
+
+        return {
+          success: true,
+          message: out, // Return the same formatted output as the tool result
+          customerId,
+          limit,
+          data: limited,
+          raw: rows,
+          formattedOutput: out,
+        };
       }
 
       return {
         success: true,
-        message: limited.length ? "Customer history retrieved" : "No repair history found",
+        message: "No repair history found",
         customerId,
         limit,
         data: limited,

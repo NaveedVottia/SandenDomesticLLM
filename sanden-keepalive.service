@@ -1,0 +1,17 @@
+[Unit]
+Description=Sanden Repair System Keep-Alive Monitor
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/sanden-repair-system-V2
+ExecStart=/bin/bash /home/ec2-user/sanden-repair-system-V2/keep-alive.sh
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

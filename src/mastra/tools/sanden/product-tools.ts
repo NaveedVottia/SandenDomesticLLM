@@ -3,6 +3,45 @@ import { z } from "zod";
 import { zapierMcp } from "../../../integrations/zapier-mcp.js";
 import { sharedMastraMemory, createMemoryIds, getCustomerData } from "../../shared-memory.js";
 
+// Import the robust row extraction function from customer-tools
+function extractRowsFromZapier(result: any): any[] {
+  if (!result) return [];
+  // Direct rows array
+  if (Array.isArray(result?.rows)) return result.rows;
+  // Results array or object with nested rows
+  if (result?.results) {
+    const out: any[] = [];
+    if (Array.isArray(result.results)) {
+      for (const entry of result.results) {
+        if (Array.isArray(entry?.rows)) out.push(...entry.rows);
+        else if (entry) out.push(entry);
+      }
+    } else if (typeof result.results === "object") {
+      for (const key of Object.keys(result.results)) {
+        if (!/^\d+$/.test(key)) continue;
+        const value = (result.results as any)[key];
+        if (Array.isArray(value?.rows)) out.push(...value.rows);
+        else if (Array.isArray(value)) out.push(...value);
+        else if (value) out.push(value);
+      }
+    }
+    if (out.length) return out;
+  }
+  // Numeric keyed object: { "0": { rows: [...] }, ... }
+  if (typeof result === "object") {
+    const out: any[] = [];
+    for (const key of Object.keys(result)) {
+      if (!/^\d+$/.test(key)) continue;
+      const value = (result as any)[key];
+      if (Array.isArray(value?.rows)) out.push(...value.rows);
+      else if (Array.isArray(value)) out.push(...value);
+      else if (value) out.push(value);
+    }
+    if (out.length) return out;
+  }
+  return [];
+}
+
 export const searchProductsTool = createTool({
   id: "searchProducts",
   description: "Search for products in the Sanden repair system",
@@ -90,22 +129,28 @@ export const hybridGetProductsByCustomerIdTool = createTool({
     data: z.record(z.string(), z.unknown()),
     message: z.string(),
   }),
-  execute: async ({ context }: { context: any }) => {
+  execute: async ({ context, writer }: { context: any; writer?: any }) => {
     let { customerId, sessionId = "default-session" } = context;
 
-    // If customerId is not provided, try to get it from shared memory
+    // If customerId is directly provided (like CUST008), use it immediately
+    if (customerId && customerId.match(/^CUST\d+$/)) {
+      console.log(`✅ [DEBUG] Direct customer ID provided: ${customerId}`);
+    } else {
+      // Try to get customer ID from session context
+      if (!customerId && context.session && context.session.customerId) {
+        customerId = context.session.customerId;
+        console.log(`🔍 [DEBUG] Retrieved customer ID from session: ${customerId}`);
+      }
+    }
+
+    // If still no customerId, try to get it from shared memory
     if (!customerId) {
       try {
-        customerId = sharedMastraMemory.get("customerId");
-        console.log(`🔍 [DEBUG] Retrieved customer ID from memory: ${customerId}`);
-      } catch (error) {
-        console.log(`❌ [DEBUG] Error getting customer ID from memory:`, error);
-        
-        // Fallback: Try different possible session IDs to find the customer data
+        // Try different possible session IDs to find the customer data
         const possibleSessionIds = [
           sessionId,
           'default',
-          'current', 
+          'current',
           'session',
           `session-${Date.now()}`
         ];
@@ -135,6 +180,8 @@ export const hybridGetProductsByCustomerIdTool = createTool({
             }
           }
         }
+      } catch (error) {
+        console.log(`❌ [DEBUG] Error getting customer ID from memory:`, error);
       }
     }
 
@@ -149,65 +196,51 @@ export const hybridGetProductsByCustomerIdTool = createTool({
 
     try {
       console.log(`🔍 [DEBUG] Getting products for customer ID: ${customerId}`);
-      
+
       const result = await zapierMcp.callTool("google_sheets_lookup_spreadsheet_rows_advanced", {
         instructions: `Get all products for customer ID: ${customerId}`,
         worksheet: "Products",
-        lookup_key: "顧客ID",
+        lookup_key: "COL$B",  // Exact column for 顧客ID in Products worksheet
         lookup_value: customerId,
         row_count: "50"
       });
       
       console.log(`🔍 [DEBUG] Zapier result for products:`, JSON.stringify(result, null, 2));
-      
-      // Handle different possible result structures
-      let rows = [];
-      
-      // First, try to extract from content[0].text if it's a JSON string
-      if (result && result.content && Array.isArray(result.content) && result.content[0] && result.content[0].text) {
-        try {
-          console.log(`🔍 [DEBUG] Found content[0].text, parsing JSON...`);
-          const parsedContent = JSON.parse(result.content[0].text);
-          console.log(`🔍 [DEBUG] Parsed content:`, JSON.stringify(parsedContent, null, 2));
-          
-          if (parsedContent && parsedContent.results && Array.isArray(parsedContent.results) && parsedContent.results[0] && parsedContent.results[0].rows) {
-            rows = parsedContent.results[0].rows;
-            console.log(`🔍 [DEBUG] Extracted rows from parsed content:`, JSON.stringify(rows, null, 2));
-          }
-        } catch (parseError) {
-          console.log(`❌ [DEBUG] Failed to parse content[0].text as JSON:`, parseError);
-        }
-      }
-      
-      // Fallback to original logic if content parsing didn't work
-      if (rows.length === 0) {
-        if (result && result["0"] && result["0"].rows) {
-          rows = result["0"].rows;
-        } else if (result && Array.isArray(result)) {
-          rows = result;
-        } else if (result && result.rows) {
-          rows = result.rows;
-        } else if (result && result.results && result.results[0] && result.results[0].rows) {
-          rows = result.results[0].rows;
-        }
-      }
-      
+
+      // Use the same robust extraction logic as repair history
+      const rows = extractRowsFromZapier(result);
+
       console.log(`🔍 [DEBUG] Final extracted product rows:`, JSON.stringify(rows, null, 2));
-      
+
       if (rows && rows.length > 0) {
         console.log(`✅ [DEBUG] Found ${rows.length} product records`);
-        
-        // Format the product data
+
+        // Format the product data (same structure as repair history)
         const products = rows.map((row: any) => ({
           productId: row["COL$A"] || row["製品ID"],
           customerId: row["COL$B"] || row["顧客ID"],
+          productCategory: row["COL$C"] || row["製品カテゴリ"],
           model: row["COL$D"] || row["型式"],
           serialNumber: row["COL$E"] || row["シリアル番号"],
           warrantyStatus: row["COL$F"] || row["保証状況"]
         }));
-        
+
         console.log(`✅ [DEBUG] Formatted products:`, JSON.stringify(products, null, 2));
-        
+
+        // Output directly to UI like repair history tool
+        if (writer && products.length > 0) {
+          let out = `顧客ID ${customerId} の製品情報 (${products.length}件)\n\n`;
+          products.forEach((product, idx) => {
+            out += `${idx + 1}. 製品情報\n`;
+            out += `   製品ID: ${product.productId}\n`;
+            out += `   製品カテゴリ: ${product.productCategory}\n`;
+            out += `   型式: ${product.model}\n`;
+            out += `   シリアル番号: ${product.serialNumber}\n`;
+            out += `   保証状況: ${product.warrantyStatus}\n\n`;
+          });
+          try { writer.write(out); } catch {}
+        }
+
         return {
           success: true,
           data: products,
@@ -223,10 +256,11 @@ export const hybridGetProductsByCustomerIdTool = createTool({
       }
     } catch (error: any) {
       console.error(`❌ [DEBUG] Error getting products:`, error);
+
       return {
         success: false,
         data: null,
-        message: `Failed to get products: ${error.message}`,
+        message: `製品情報の取得に失敗しました: ${error.message}`,
       };
     }
   },

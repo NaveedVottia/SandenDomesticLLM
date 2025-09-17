@@ -7,6 +7,9 @@ module.exports = {
       interpreter_args: '--loader tsx',
       instances: 1,
       autorestart: true,
+      restart_delay: 4000,
+      max_restarts: 10,
+      min_uptime: '10s',
       watch: false,
       max_memory_restart: '1G',
       env: {

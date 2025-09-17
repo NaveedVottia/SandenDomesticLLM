@@ -11,9 +11,7 @@ import { fileURLToPath } from "url";
 import { sharedMastraMemory } from "../../shared-memory.js";
 
 // Load environment variables with absolute path
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, "../../../../server.env") });
+dotenv.config({ path: path.resolve(process.cwd(), "server.env") });
 
 let REPAIR_HISTORY_INSTRUCTIONS = "";
 try {

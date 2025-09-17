@@ -118,11 +118,20 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.get("/health", async (req: Request, res: Response) => {
   try {
     console.log("🔍 Health check: Checking Mastra instance...");
-    const mastra = await mastraPromise;
+
+    // Add timeout to mastraPromise to prevent hanging
+    const mastraPromiseWithTimeout = Promise.race([
+      mastraPromise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Mastra initialization timeout')), 10000)
+      )
+    ]);
+
+    const mastra = await mastraPromiseWithTimeout;
     console.log("mastra type:", typeof mastra);
     console.log("mastra.agents:", mastra.agents);
     console.log("mastra.getAgentById:", typeof mastra.getAgentById);
-    
+
     // Test agent access
     const knownAgentIds = [
       'customer-identification',
@@ -130,7 +139,7 @@ app.get("/health", async (req: Request, res: Response) => {
       'repair-history-ticket',
       'repair-scheduling'
     ];
-    
+
     console.log("Trying known agent IDs:", knownAgentIds);
     for (const agentId of knownAgentIds) {
       try {
@@ -144,9 +153,9 @@ app.get("/health", async (req: Request, res: Response) => {
         console.log(`❌ Error accessing agent ${agentId}:`, error);
       }
     }
-    
-    res.json({ 
-      status: "healthy", 
+
+    res.json({
+      status: "healthy",
       timestamp: new Date().toISOString(),
       agents: knownAgentIds,
       mastra: "initialized"
@@ -174,6 +183,7 @@ async function getAgentById(agentId: string) {
 
 // Helper function to encode chunks for Mastra f0ed protocol
 function encodeChunk(chunk: string): string {
+  // Escape newlines to maintain valid JSON format for streaming
   return chunk.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
 }
 
@@ -185,19 +195,15 @@ async function streamMastraResponse(stream: any, res: Response): Promise<number>
     for await (const chunk of stream.textStream) {
       if (typeof chunk === 'string' && chunk.trim()) {
         totalLength += chunk.length;
-        // Split into characters and emit each as a separate 0: line
-        for (const ch of chunk) {
-          res.write(`0:"${encodeChunk(ch)}"\n`);
-        }
+        // Send the entire chunk as one unit to preserve formatting
+        res.write(`0:"${encodeChunk(chunk)}"\n`);
       }
     }
   } catch (error) {
     console.error("❌ Error streaming response:", error);
     const fallback = errorMessages.streamingError || "申し訳ございませんが、エラーが発生しました。";
     totalLength = fallback.length;
-    for (const ch of fallback) {
-      res.write(`0:"${encodeChunk(ch)}"\n`);
-    }
+    res.write(`0:"${encodeChunk(fallback)}"\n`);
   }
 
   // If nothing was streamed, emit an empty line to satisfy protocol
@@ -293,7 +299,83 @@ app.post("/api/agents/customer-identification/test", async (req: Request, res: R
   }
 });
 
-// Main endpoint for the customer identification agent (main entry point)
+// SDK5-compatible streaming endpoint (keeps SDK4 backend, outputs SDK5 format)
+app.post("/api/agents/customer-identification/stream/vnext/ui", async (req: Request, res: Response) => {
+  try {
+    console.log("🔍 SDK5-compatible streaming request received (SDK4 backend)");
+
+    const messages = Array.isArray(req.body?.messages) ? req.body.messages : [];
+    const sessionId = getSessionId(req);
+    const session = getSession(sessionId);
+    const resourceId = sessionId;
+    const threadId = `thread-${sessionId}`;
+
+    console.log(`🔍 Processing SDK5 request with ${messages.length} messages (using SDK4 streamLegacy)`);
+
+    const agent = await getAgentById("customer-identification");
+    if (!agent) {
+      return res.status(500).json({ error: "Agent 'customer-identification' not found" });
+    }
+
+    const resolvedAgent = await agent;
+    console.log("🔍 Resolved agent type:", typeof resolvedAgent);
+
+    // Keep using SDK4 streamLegacy but convert to SDK5 format
+    if (typeof resolvedAgent.streamLegacy === 'function') {
+      console.log("🔍 Using streamLegacy (SDK4) with SDK5 format conversion...");
+
+      const stream = await resolvedAgent.streamLegacy(messages, {
+        resourceId: resourceId,
+        threadId: threadId
+      });
+
+      console.log("✅ StreamLegacy succeeded, converting to SDK5 format");
+
+      // Convert SDK4 stream to SDK5-compatible format
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      // Send SDK5-compatible message format
+      const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Send initial message metadata (SDK5 format)
+      res.write(`f:{"messageId":"${messageId}"}\n`);
+
+      try {
+        // Stream the text content
+        for await (const chunk of stream.textStream) {
+          if (typeof chunk === 'string' && chunk.trim()) {
+            // Send data chunks (SDK5 format)
+            res.write(`0:"${chunk.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"\n`);
+          }
+        }
+
+        // Send completion (SDK5 format)
+        res.write(`e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0},"isContinued":false}\n`);
+        res.write(`d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`);
+
+      } catch (streamError) {
+        console.error("❌ Stream processing error:", streamError);
+        res.write(`e:{"finishReason":"error","usage":{"promptTokens":0,"completionTokens":0},"isContinued":false}\n`);
+      }
+
+      res.end();
+      return;
+
+    } else {
+      console.log("⚠️ Agent does not support streamLegacy");
+      return res.status(500).json({ error: "Agent does not support streaming" });
+    }
+
+  } catch (error: unknown) {
+    console.error("❌ [SDK5 endpoint] error:", error);
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return res.status(500).json({ error: message });
+  }
+});
+
+// Main endpoint for the customer identification agent (main entry point - legacy SDK v4)
 app.post("/api/agents/customer-identification/stream", async (req: Request, res: Response) => {
   try {
     const messages = Array.isArray(req.body?.messages) ? req.body.messages : [];
@@ -870,7 +952,8 @@ const PORT = process.env.PORT || 80;
 const server = app.listen(PORT, () => {
   console.log(`🚀 Mastra server started successfully!`);
   console.log(`🌐 Server running on port ${PORT} (configured in Lightsail firewall)`);
-  console.log(`🔗 Main endpoint: POST /api/agents/customer-identification/stream`);
+  console.log(`🔗 AI SDK v5 endpoint: POST /api/agents/customer-identification/stream/vnext/ui`);
+  console.log(`🔗 Main endpoint (SDK v4): POST /api/agents/customer-identification/stream`);
   console.log(`🔗 Legacy endpoints: POST /api/agents/repair-workflow-orchestrator/stream (redirects to customer-identification)`);
   console.log(`🔗 Individual agent endpoints:`);
   console.log(`   - POST /api/agents/repair-agent/stream`);
@@ -884,13 +967,32 @@ server.timeout = 60000;
 server.keepAliveTimeout = 65000;
 server.headersTimeout = 66000;
 
-// Graceful shutdown
+// Prevent unhandled errors from crashing the server
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit the process, just log the error
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  // Don't exit the process, just log the error
+});
+
+// Graceful shutdown - only respond to explicit signals
 process.on('SIGTERM', () => {
-  console.log('🛑 Shutting down server...');
-  process.exit(0);
+  console.log('🛑 SIGTERM received - shutting down gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed successfully');
+    process.exit(0);
+  });
 });
 
 process.on('SIGINT', () => {
-  console.log('🛑 Shutting down server...');
-  process.exit(0);
+  console.log('🛑 SIGINT received - shutting down gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed successfully');
+    process.exit(0);
+  });
 });
+
+// Server is now managed by PM2 for permanent operation
