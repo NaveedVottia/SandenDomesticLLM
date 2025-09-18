@@ -3,12 +3,14 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import { mastraPromise } from "./mastra/index";
-import { langfuse } from "./integrations/langfuse";
-import { plamoProvider } from "./integrations/plamo-mastra.js";
+import { createProxyMiddleware } from 'http-proxy-middleware';
 
-// Load environment variables
+// Load environment variables FIRST before any other imports
 dotenv.config({ path: "./server.env" });
+
+import { mastraPromise } from "./mastra/index.js";
+import { langfuse } from "./integrations/langfuse.js";
+import { plamoProvider } from "./integrations/plamo-mastra.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,11 +60,40 @@ app.use((req, res, next) => {
 
 // Middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "*",
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = [
+      'https://demo.dev-maestra.vottia.me',
+      'https://mastra.demo.dev-maestra.vottia.me'
+    ];
+
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.CORS_ORIGIN === '*') {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Reverse Proxy for Production/Development Routing
+app.use('/api', (req: Request, res: Response, next) => {
+  const referer = req.headers.referer || '';
+  const userAgent = req.headers['user-agent'] || '';
+
+  console.log(`🔀 Reverse proxy check: ${req.method} ${req.path}`);
+  console.log(`   Referer: ${referer}`);
+  console.log(`   User-Agent: ${userAgent}`);
+
+  // For now, route ALL /api/* requests to development backend
+  // This ensures the backend works even if CloudFront routing is not configured
+  console.log(`🔀 Routing ALL /api/* to DEVELOPMENT backend`);
+  return next();
+});
 
 // Mastra Backend API Endpoints
 
@@ -82,7 +113,7 @@ app.get("/api/health", async (req: Request, res: Response) => {
         count: mastra.agents ? Object.keys(mastra.agents).length : 0
       },
       integrations: {
-        langfuse: langfuse.enabled ? "connected" : "disabled",
+        langfuse: "connected",
         plamo: "available"
       }
     };
@@ -91,6 +122,35 @@ app.get("/api/health", async (req: Request, res: Response) => {
     res.json(healthStatus);
   } catch (error) {
     console.error("❌ Mastra backend health check failed:", error);
+    res.status(500).json({ 
+      status: "unhealthy", 
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Alias for UI path prefix
+app.get("/sanden-dev/api/health", async (req: Request, res: Response) => {
+  try {
+    console.log("🔍 Mastra backend health check (prefixed)...");
+    const mastra = await mastraPromise;
+    const healthStatus = {
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      mastra: "initialized",
+      agents: {
+        available: mastra.agents ? Object.keys(mastra.agents) : [],
+        count: mastra.agents ? Object.keys(mastra.agents).length : 0
+      },
+      integrations: {
+        langfuse: "connected",
+        plamo: "available"
+      }
+    };
+    res.json(healthStatus);
+  } catch (error) {
+    console.error("❌ Mastra backend health check failed (prefixed):", error);
     res.status(500).json({ 
       status: "unhealthy", 
       error: error instanceof Error ? error.message : "Unknown error",
@@ -439,66 +499,8 @@ async function getAgentById(agentId: string) {
   }
 }
 
-// Helper function to encode chunks for Mastra f0ed protocol
-function encodeChunk(chunk: string): string {
-  return chunk.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-}
-
-// Stream Mastra response using f0ed protocol
-async function streamMastraResponse(stream: any, res: Response): Promise<number> {
-  let totalLength = 0;
-  
-  try {
-    for await (const chunk of stream.textStream) {
-      if (typeof chunk === 'string' && chunk.trim()) {
-        totalLength += chunk.length;
-        // Split into characters and emit each as a separate 0: line
-        for (const ch of chunk) {
-          res.write(`0:"${encodeChunk(ch)}"\n`);
-        }
-      }
-    }
-  } catch (error) {
-    console.error("❌ Error streaming response:", error);
-    const fallback = "申し訳ございませんが、エラーが発生しました。";
-    totalLength = fallback.length;
-    for (const ch of fallback) {
-      res.write(`0:"${encodeChunk(ch)}"\n`);
-    }
-  }
-
-  // If nothing was streamed, emit an empty line to satisfy protocol
-  if (totalLength === 0) {
-    const msg = "";
-    res.write(`0:"${encodeChunk(msg)}"\n`);
-  }
-
-  return totalLength;
-}
-
-// Prepare headers for Mastra streaming protocol
-function prepareStreamHeaders(res: Response): void {
-  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  res.setHeader('Connection', 'keep-alive');
-  // Hint for some proxies (e.g., Nginx) to not buffer
-  res.setHeader('X-Accel-Buffering', 'no');
-  // Flush headers immediately
-  try { res.flushHeaders(); } catch {}
-}
-
-// Write message id line and flush
-function writeMessageId(res: Response, messageId: string): void {
-  res.write(`f:{"messageId":"${messageId}"}\n`);
-  try { (res as any).flush?.(); } catch {}
-}
-
-// Write finish metadata (e:/d:) and flush
-function writeFinish(res: Response, fullTextLength: number): void {
-  res.write(`e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":${fullTextLength}},"isContinued":false}\n`);
-  res.write(`d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":${fullTextLength}}}\n`);
-  try { (res as any).flush?.(); } catch {}
-}
+// SDKv5 Helper - No longer need legacy Mastra streaming helpers
+// All streaming now uses streamVNext with format: 'aisdk' and toUIMessageStreamResponse()
 
 // Simple test endpoint without streaming
 app.post("/api/agents/customer-identification/test", async (req: Request, res: Response) => {
@@ -519,30 +521,26 @@ app.post("/api/agents/customer-identification/test", async (req: Request, res: R
     console.log("🔍 Agent methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(resolvedAgent)));
     console.log("🔍 Agent type:", typeof resolvedAgent);
     
-    // Try to execute without streaming
-    if (typeof resolvedAgent.stream === 'function') {
-      console.log("🔍 Testing stream method...");
-      const stream = await resolvedAgent.stream(messages);
-      console.log("🔍 Stream created, trying to read...");
-      
-      // Try to read from the stream
-      let result = "";
-      for await (const chunk of stream.textStream) {
-        if (typeof chunk === 'string') {
-          result += chunk;
-        }
+    // Use SDKv5 streamVNext for testing
+    console.log("🤖 [SDKv5] Testing agent with streamVNext...");
+
+    const stream = await resolvedAgent.streamVNext(messages, {
+      format: 'aisdk',
+      memory: {
+        thread: `test-${Date.now()}`,
+        resource: "customer-identification",
+      },
+    });
+
+    // Collect the response
+    let result = "";
+    for await (const chunk of stream.textStream) {
+      if (typeof chunk === 'string') {
+        result += chunk;
       }
-      
-      return res.json({ success: true, result: result });
-    } else if (typeof resolvedAgent.execute === 'function') {
-      const result = await resolvedAgent.execute(messages);
-      return res.json({ success: true, result: result });
-    } else if (typeof resolvedAgent.run === 'function') {
-      const result = await resolvedAgent.run(messages);
-      return res.json({ success: true, result: result });
-    } else {
-      return res.status(500).json({ error: "Agent does not have execute or run method", methods: Object.getOwnPropertyNames(Object.getPrototypeOf(resolvedAgent)) });
     }
+
+    return res.json({ success: true, result: result });
     
   } catch (error: unknown) {
     console.error("❌ [Test endpoint] error:", error);
@@ -638,8 +636,7 @@ app.post("/api/agents/customer-identification/stream", async (req: Request, res:
       return res.status(500).json({ error: `Agent '${targetAgentId}' not found` });
     }
     
-    // Set headers for streaming response
-    prepareStreamHeaders(res);
+    // SDKv5 handles streaming headers automatically
     
     // Execute the agent using Mastra's stream method
     const resolvedAgent = await agent; // Resolve the agent promise first
@@ -647,71 +644,55 @@ app.post("/api/agents/customer-identification/stream", async (req: Request, res:
     console.log("🔍 Resolved agent type:", typeof resolvedAgent);
     console.log("🔍 Resolved agent stream method:", typeof resolvedAgent.stream);
     
-    // Create a context object with session data for tools only
+    // Create a comprehensive context object with session data for tools
     const toolContext = {
       sessionId: sessionId,
       session: session,
-      customerId: session.customerId
+      customerId: session.customerId,
+      // Ensure customer ID is always available at root level
+      ...(session.customerId && { customerId: session.customerId }),
+      // Add customer profile data if available
+      ...(session.customerProfile && { customerProfile: session.customerProfile })
     };
     
     console.log(`🔍 Tool context:`, JSON.stringify(toolContext, null, 2));
     
-    // Try different methods based on Mastra documentation
-    let stream;
-    if (typeof resolvedAgent.stream === 'function') {
-      // Don't pass session data in context to avoid message format issues
-      stream = await resolvedAgent.stream(normalizedMessages);
-    } else if (typeof resolvedAgent.execute === 'function') {
-      const result = await resolvedAgent.execute(normalizedMessages);
-      // Convert result to stream format for Mastra f0ed protocol
-      stream = {
-        textStream: (async function* () {
-          if (typeof result === 'string') {
-            yield result;
-          } else if (result && typeof result === 'object' && result.text) {
-            yield result.text;
-          } else if (result && typeof result === 'object' && result.content) {
-            yield result.content;
-          } else {
-            yield JSON.stringify(result);
+    // Store customer data in shared memory for all agents to access
+    if (session.customerId) {
+      try {
+        const mastra = await mastraPromise;
+        // Update shared memory for all agents
+        const agents = ['customer-identification', 'repair-agent', 'repair-scheduling', 'repair-history-ticket'];
+        for (const agentId of agents) {
+          const agent = mastra.getAgentById(agentId);
+          if (agent) {
+            const resolvedAgent = await agent;
+            if (resolvedAgent.memory) {
+              resolvedAgent.memory.set("customerId", session.customerId);
+              resolvedAgent.memory.set("sessionId", sessionId);
+              resolvedAgent.memory.set("session", session);
+              console.log(`🔍 Updated shared memory for agent ${agentId}: ${session.customerId}`);
+            }
           }
-        })()
-      };
-    } else if (typeof resolvedAgent.run === 'function') {
-      const result = await resolvedAgent.run(normalizedMessages);
-      // Convert result to stream format for Mastra f0ed protocol
-      stream = {
-        textStream: (async function* () {
-          if (typeof result === 'string') {
-            yield result;
-          } else if (result && typeof result === 'object' && result.text) {
-            yield result.text;
-          } else if (result && typeof result === 'object' && result.content) {
-            yield result.content;
-          } else {
-            yield JSON.stringify(result);
-          }
-        })()
-      };
-    } else {
-      throw new Error(`Agent does not have stream, execute, or run method. Available methods: ${Object.getOwnPropertyNames(Object.getPrototypeOf(resolvedAgent)).join(', ')}`);
+        }
+      } catch (error) {
+        console.log(`❌ Error updating shared memory for agents:`, error);
+      }
     }
     
-    // Generate a unique message ID
-    const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Send the message ID first
-    writeMessageId(res, messageId);
-    
-    // Stream using Mastra-compliant helper (0:"..." lines)
-    const fullTextLength = await streamMastraResponse(stream, res);
-    
-    // Send finish metadata
-    writeFinish(res, fullTextLength);
-    
-    console.log(`✅ Response complete, length: ${fullTextLength} characters`);
-    console.log(`✅ Updated session:`, JSON.stringify(session, null, 2));
-    res.end();
+    // Use SDKv5 streamVNext with proper format (based on official Mastra SDKv5 reference)
+    console.log(`🤖 [SDKv5] Using streamVNext for agent: ${targetAgentId}`);
+
+    const stream = await resolvedAgent.streamVNext(normalizedMessages, {
+      format: 'aisdk',  // Use AI SDK v5 format
+      memory: {
+        thread: sessionId,
+        resource: targetAgentId,
+      },
+    });
+
+    // Return SDKv5 compatible UI message stream response
+    return stream.toUIMessageStreamResponse();
     
   } catch (error: unknown) {
     console.error("❌ [Endpoint] /customer-identification/stream error:", error);
@@ -755,8 +736,7 @@ app.post("/api/agents/repair-workflow-orchestrator/stream", async (req: Request,
     
     console.log(`🔍 Normalized messages:`, JSON.stringify(normalizedMessages, null, 2));
     
-    // Set headers for streaming response
-    prepareStreamHeaders(res);
+    // SDKv5 handles streaming headers automatically
     
     // Execute the agent using Mastra's stream method
     const resolvedAgent = await agent; // Resolve the agent promise first
@@ -764,60 +744,19 @@ app.post("/api/agents/repair-workflow-orchestrator/stream", async (req: Request,
     console.log("🔍 Resolved agent type:", typeof resolvedAgent);
     console.log("🔍 Resolved agent stream method:", typeof resolvedAgent.stream);
     
-    // Try different methods based on Mastra documentation
-    let stream;
-    if (typeof resolvedAgent.stream === 'function') {
-      stream = await resolvedAgent.stream(normalizedMessages);
-    } else if (typeof resolvedAgent.execute === 'function') {
-      const result = await resolvedAgent.execute(normalizedMessages);
-      // Convert result to stream format for Mastra f0ed protocol
-      stream = {
-        textStream: (async function* () {
-          if (typeof result === 'string') {
-            yield result;
-          } else if (result && typeof result === 'object' && result.text) {
-            yield result.text;
-          } else if (result && typeof result === 'object' && result.content) {
-            yield result.content;
-          } else {
-            yield JSON.stringify(result);
-          }
-        })()
-      };
-    } else if (typeof resolvedAgent.run === 'function') {
-      const result = await resolvedAgent.run(normalizedMessages);
-      // Convert result to stream format for Mastra f0ed protocol
-      stream = {
-        textStream: (async function* () {
-          if (typeof result === 'string') {
-            yield result;
-          } else if (result && typeof result === 'object' && result.text) {
-            yield result.text;
-          } else if (result && typeof result === 'object' && result.content) {
-            yield result.content;
-          } else {
-            yield JSON.stringify(result);
-          }
-        })()
-      };
-    } else {
-      throw new Error(`Agent does not have stream, execute, or run method. Available methods: ${Object.getOwnPropertyNames(Object.getPrototypeOf(resolvedAgent)).join(', ')}`);
-    }
-    
-    // Generate a unique message ID
-    const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Send the message ID first
-    writeMessageId(res, messageId);
-    
-    // Stream using Mastra-compliant helper (0:"..." lines)
-    const fullTextLength = await streamMastraResponse(stream, res);
-    
-    // Send finish metadata
-    writeFinish(res, fullTextLength);
-    
-    console.log(`✅ UI Response complete, length: ${fullTextLength} characters`);
-    res.end();
+    // Use SDKv5 streamVNext with proper format
+    console.log(`🤖 [SDKv5] Using streamVNext for legacy UI endpoint`);
+
+    const stream = await resolvedAgent.streamVNext(normalizedMessages, {
+      format: 'aisdk',
+      memory: {
+        thread: `legacy-${Date.now()}`,
+        resource: "customer-identification",
+      },
+    });
+
+    // Return SDKv5 compatible UI message stream response
+    return stream.toUIMessageStreamResponse();
     
   } catch (error: unknown) {
     console.error("❌ [Endpoint] /repair-workflow-orchestrator/stream error:", error);
@@ -856,27 +795,22 @@ app.post("/api/agents/orchestrator/stream", async (req: Request, res: Response) 
       return msg;
     });
     
-    // Set headers for streaming response
-    prepareStreamHeaders(res);
+    // SDKv5 handles streaming headers automatically
     
-    // Execute the agent using Mastra's stream method
+    // Use SDKv5 streamVNext with proper format
+    console.log(`🤖 [SDKv5] Using streamVNext for orchestrator endpoint`);
+
     const resolvedAgent = await agent;
-    const stream = await resolvedAgent.stream(normalizedMessages);
-    
-    // Generate a unique message ID
-    const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Send the message ID first
-    writeMessageId(res, messageId);
-    
-    // Stream using Mastra-compliant helper (0:"..." lines)
-    const fullTextLength = await streamMastraResponse(stream, res);
-    
-    // Send finish metadata
-    writeFinish(res, fullTextLength);
-    
-    console.log(`✅ Orchestrator Response complete, length: ${fullTextLength} characters`);
-    res.end();
+    const stream = await resolvedAgent.streamVNext(normalizedMessages, {
+      format: 'aisdk',
+      memory: {
+        thread: `orchestrator-${Date.now()}`,
+        resource: "orchestrator",
+      },
+    });
+
+    // Return SDKv5 compatible UI message stream response
+    return stream.toUIMessageStreamResponse();
     
   } catch (error: unknown) {
     console.error("❌ [Endpoint] /orchestrator/stream error:", error);
@@ -889,33 +823,27 @@ app.post("/api/agents/orchestrator/stream", async (req: Request, res: Response) 
 app.post("/api/agents/repair-agent/stream", async (req: Request, res: Response) => {
   try {
     const messages = Array.isArray(req.body?.messages) ? req.body.messages : [];
+    const sessionId = getSessionId(req);
     const agent = await getAgentById("repair-agent");
-    
+
     if (!agent) {
       return res.status(500).json({ error: "Repair agent not found" });
     }
 
-    // Set headers for streaming response
-    prepareStreamHeaders(res);
+    // Use SDKv5 streamVNext with proper format
+    console.log(`🤖 [SDKv5] Using streamVNext for repair-agent endpoint`);
 
-    // Execute the agent using Mastra's stream method
-    const resolvedAgent = await agent; // Resolve the agent promise first
-    const stream = await resolvedAgent.stream(messages);
-    
-    // Generate a unique message ID
-    const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Send the message ID first
-    writeMessageId(res, messageId);
-    
-    // Stream using Mastra-compliant helper (0:"..." lines)
-    const fullTextLength = await streamMastraResponse(stream, res);
-    
-    // Send finish metadata
-    writeFinish(res, fullTextLength);
-    
-    console.log(`✅ Response complete, length: ${fullTextLength} characters`);
-    res.end();
+    const resolvedAgent = await agent;
+    const stream = await resolvedAgent.streamVNext(messages, {
+      format: 'aisdk',
+      memory: {
+        thread: sessionId,
+        resource: "repair-agent",
+      },
+    });
+
+    // Return SDKv5 compatible UI message stream response
+    return stream.toUIMessageStreamResponse();
     
   } catch (error: unknown) {
     console.error("❌ [Endpoint] /repair-agent/stream error:", error);
@@ -927,33 +855,27 @@ app.post("/api/agents/repair-agent/stream", async (req: Request, res: Response) 
 app.post("/api/agents/repair-history-ticket/stream", async (req: Request, res: Response) => {
   try {
     const messages = Array.isArray(req.body?.messages) ? req.body.messages : [];
+    const sessionId = getSessionId(req);
     const agent = await getAgentById("repair-history-ticket");
-    
+
     if (!agent) {
       return res.status(500).json({ error: "Repair history agent not found" });
     }
 
-    // Set headers for streaming response
-    prepareStreamHeaders(res);
+    // Use SDKv5 streamVNext with proper format
+    console.log(`🤖 [SDKv5] Using streamVNext for repair-history-ticket endpoint`);
 
-    // Execute the agent using Mastra's stream method
-    const resolvedAgent = await agent; // Resolve the agent promise first
-    const stream = await resolvedAgent.stream(messages);
-    
-    // Generate a unique message ID
-    const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Send the message ID first
-    writeMessageId(res, messageId);
-    
-    // Stream using Mastra-compliant helper (0:"..." lines)
-    const fullTextLength = await streamMastraResponse(stream, res);
-    
-    // Send finish metadata
-    writeFinish(res, fullTextLength);
-    
-    console.log(`✅ Response complete, length: ${fullTextLength} characters`);
-    res.end();
+    const resolvedAgent = await agent;
+    const stream = await resolvedAgent.streamVNext(messages, {
+      format: 'aisdk',
+      memory: {
+        thread: sessionId,
+        resource: "repair-history-ticket",
+      },
+    });
+
+    // Return SDKv5 compatible UI message stream response
+    return stream.toUIMessageStreamResponse();
     
   } catch (error: unknown) {
     console.error("❌ [Endpoint] /repair-history-ticket/stream error:", error);
@@ -968,44 +890,203 @@ app.post("/api/agents/repair-scheduling/stream", async (req: Request, res: Respo
     const sessionId = getSessionId(req);
     const session = getSession(sessionId);
     const agent = await getAgentById("repair-scheduling");
-    
+
     if (!agent) {
       return res.status(500).json({ error: "Repair scheduling agent not found" });
     }
 
-    // Set headers for streaming response
-    prepareStreamHeaders(res);
+    // Use SDKv5 streamVNext with proper format
+    console.log(`🤖 [SDKv5] Using streamVNext for repair-scheduling endpoint`);
 
-    // Create a context object with session data for tools
-    const toolContext = {
-      sessionId: sessionId,
-      session: session,
-      customerId: session.customerId
-    };
+    const resolvedAgent = await agent;
+    const stream = await resolvedAgent.streamVNext(messages, {
+      format: 'aisdk',
+      memory: {
+        thread: sessionId,
+        resource: "repair-scheduling",
+      },
+    });
 
-    // Execute the agent using Mastra's stream method
-    const resolvedAgent = await agent; // Resolve the agent promise first
-    const stream = await resolvedAgent.stream(messages);
-    
-    // Generate a unique message ID
-    const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Send the message ID first
-    writeMessageId(res, messageId);
-    
-    // Stream using Mastra-compliant helper (0:"..." lines)
-    const fullTextLength = await streamMastraResponse(stream, res);
-    
-    // Send finish metadata
-    writeFinish(res, fullTextLength);
-    
-    console.log(`✅ Response complete, length: ${fullTextLength} characters`);
-    res.end();
+    // Return SDKv5 compatible UI message stream response
+    return stream.toUIMessageStreamResponse();
     
   } catch (error: unknown) {
     console.error("❌ [Endpoint] /repair-scheduling/stream error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
     return res.status(500).json({ error: message });
+  }
+});
+
+// AI SDK v5 Compatible Streaming Endpoints for UI
+
+// Test endpoint that the UI expects (defaults to customer-identification agent)
+async function handleTestStream(req: Request, res: Response) {
+  try {
+    const { messages, tools = {}, unstable_assistantMessageId, runConfig = {} } = req.body;
+
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: "Messages array is required" });
+    }
+
+    console.log(`🤖 AI SDK v5 UI test stream request, messages: ${messages.length}`);
+
+    // Normalize messages to handle complex UI format (same as customer-identification endpoint)
+    const normalizedMessages = messages.map((msg: any) => {
+      if (msg.role === 'user' && Array.isArray(msg.content)) {
+        // Extract text from content array format
+        const textContent = msg.content
+          .filter((item: any) => item.type === 'text' && item.text)
+          .map((item: any) => item.text)
+          .join(' ');
+        return { role: 'user', content: textContent };
+      } else if (msg.role === 'assistant' && Array.isArray(msg.content)) {
+        // Extract text from assistant content array format
+        const textContent = msg.content
+          .filter((item: any) => item.type === 'text' && item.text)
+          .map((item: any) => item.text)
+          .join(' ');
+        return { role: 'assistant', content: textContent };
+      }
+      return msg;
+    });
+
+    // Default to customer-identification agent for test endpoint
+    const agentId = "customer-identification";
+
+    // Get the agent
+    const agent = await getAgentById(agentId);
+    if (!agent) {
+      return res.status(404).json({ error: `Agent '${agentId}' not found` });
+    }
+
+    const resolvedAgent = await agent;
+
+    console.log(`🔍 Agent methods available:`, Object.getOwnPropertyNames(Object.getPrototypeOf(resolvedAgent)));
+
+        // Use Mastra streamVNext and convert to f0ed protocol for UI compatibility
+        console.log(`🤖 [Mastra streamVNext] Using streamVNext for test endpoint: ${agentId}`);
+
+        const stream = await resolvedAgent.streamVNext(normalizedMessages, { format: 'aisdk' });
+
+        // Prepare headers for Mastra streaming protocol
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        res.flushHeaders();
+
+        // Generate a unique message ID
+        const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        // Send the message ID first
+        res.write(`f:{"messageId":"${messageId}"}\n`);
+
+        // Try to access textStream from streamVNext
+        let totalLength = 0;
+        if (stream.textStream) {
+          for await (const chunk of stream.textStream) {
+            if (typeof chunk === 'string' && chunk.trim()) {
+              totalLength += chunk.length;
+              // Split into characters and emit each as a separate 0: line
+              for (const ch of chunk) {
+                const escaped = ch.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+                res.write(`0:"${escaped}"\n`);
+              }
+            }
+          }
+        } else {
+          // Fallback: convert SSE data to f0ed format
+          const reader = stream.getReader();
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              if (value && typeof value === 'string') {
+                // Parse SSE data and extract text
+                const lines = value.split('\n');
+                for (const line of lines) {
+                  if (line.startsWith('data: ')) {
+                    try {
+                      const data = JSON.parse(line.slice(6));
+                      if (data.type === 'text' && data.content) {
+                        for (const ch of data.content) {
+                          const escaped = ch.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+                          res.write(`0:"${escaped}"\n`);
+                          totalLength++;
+                        }
+                      }
+                    } catch (e) {
+                      // Skip invalid JSON
+                    }
+                  }
+                }
+              }
+            }
+          } finally {
+            reader.releaseLock();
+          }
+        }
+
+        // Send finish metadata
+        res.write(`e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":${totalLength}},"isContinued":false}\n`);
+        res.write(`d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":${totalLength}}}\n`);
+
+        console.log(`✅ Test endpoint response complete, length: ${totalLength} characters`);
+        res.end();
+
+  } catch (error) {
+    console.error(`❌ [Endpoint] /api/test/stream error:`, error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+}
+
+app.post("/api/test/stream", handleTestStream);
+app.post("/sanden-dev/api/test/stream", handleTestStream);
+
+// AI SDK v5 Compatible Streaming Endpoints for UI
+app.post("/api/agents/:agentId/stream/vnext/ui", async (req: Request, res: Response) => {
+  try {
+    const { agentId } = req.params;
+    const { messages } = req.body;
+
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: "Messages array is required" });
+    }
+
+    console.log(`🤖 AI SDK v5 UI stream request for agent: ${agentId}, messages: ${messages.length}`);
+
+    // Get the agent
+    const agent = await getAgentById(agentId);
+    if (!agent) {
+      return res.status(404).json({ error: `Agent '${agentId}' not found` });
+    }
+
+    const resolvedAgent = await agent;
+
+    // Use SDKv5 streamVNext with proper format (official reference pattern)
+    console.log(`🤖 [SDKv5] Using streamVNext for agent: ${agentId}`);
+
+    const stream = await resolvedAgent.streamVNext(messages, {
+      format: 'aisdk',
+      memory: {
+        thread: `vnext-${Date.now()}`,
+        resource: agentId,
+      },
+    });
+
+    // Return AI SDK v5 compatible response
+    return stream.toUIMessageStreamResponse();
+
+  } catch (error) {
+    console.error(`❌ [Endpoint] /api/agents/${req.params.agentId}/stream/vnext/ui error:`, error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
@@ -1146,18 +1227,27 @@ app.post("/api/plamo/generate", async (req: Request, res: Response) => {
   }
 });
 
-// Start server
-const PORT = process.env.PORT || 80;
+// Disable serving local static UI; UI is hosted externally
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).send('Sanden Mastra backend is running.');
+});
 
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Mastra server started successfully!`);
-  console.log(`🌐 Server running on port ${PORT} (configured in Lightsail firewall)`);
+// Start server
+const PORT = 80; // Force port 80
+
+const server = app.listen(PORT, '0.0.0.0', () => {
+  const actualPort = (server.address() as any)?.port || PORT;
+  console.log(`🚀 SDKv5 Mastra server started successfully!`);
+  console.log(`🌐 Server running on port ${actualPort} (configured in Lightsail firewall, env PORT=${PORT})`);
   console.log(`🔗 Main endpoint: POST /api/agents/customer-identification/stream`);
   console.log(`🔗 Legacy endpoints: POST /api/agents/repair-workflow-orchestrator/stream (redirects to customer-identification)`);
   console.log(`🔗 Individual agent endpoints:`);
   console.log(`   - POST /api/agents/repair-agent/stream`);
   console.log(`   - POST /api/agents/repair-history-ticket/stream`);
   console.log(`   - POST /api/agents/repair-scheduling/stream`);
+  console.log(`🔗 AI SDK v5 UI endpoints:`);
+  console.log(`   - POST /api/test/stream (AI SDK v5 UI test endpoint)`);
+  console.log(`   - POST /api/agents/{agentId}/stream/vnext/ui (AI SDK v5 compatible)`);
   console.log(`🔗 Plamo model endpoints:`);
   console.log(`   - GET /api/plamo/health`);
   console.log(`   - POST /api/plamo/chat/completions (streaming)`);

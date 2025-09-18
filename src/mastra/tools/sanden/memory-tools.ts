@@ -1,6 +1,6 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { sharedMemory } from "../../agents/sanden/customer-identification";
+import { sharedMemory } from "../../agents/sanden/customer-identification.js";
 
 // Working memory template for customer profiles
 const WORKING_MEMORY_TEMPLATE = `# Customer Profile

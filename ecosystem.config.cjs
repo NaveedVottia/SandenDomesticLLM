@@ -2,9 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'sanden-repair-system',
-      script: 'src/mastra-server.ts',
+      script: 'src/mastra-server.js',
       interpreter: 'node',
-      interpreter_args: '--loader tsx',
       instances: 1,
       autorestart: true,
       watch: false,

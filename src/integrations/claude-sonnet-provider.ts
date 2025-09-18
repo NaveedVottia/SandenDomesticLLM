@@ -2,27 +2,27 @@ import { bedrock } from "@ai-sdk/amazon-bedrock";
 import { streamText, generateText } from "ai";
 import { LangfuseIntegration } from "./langfuse.js";
 
-export class ClaudeHaikuProvider {
+export class ClaudeSonnetProvider {
   private model: any;
   private langfuse: LangfuseIntegration;
   private modelName: string;
 
   constructor() {
-    this.modelName = "claude-haiku-3";
+    this.modelName = "claude-sonnet-3.5-v1";
     this.langfuse = new LangfuseIntegration();
     
-    // Initialize Claude Haiku from AWS Bedrock
-    this.model = bedrock("anthropic.claude-3-haiku-20240307-v1:0");
-    
-    console.log(`🤖 Claude Haiku Provider initialized with model: anthropic.claude-3-haiku-20240307-v1:0`);
+    // Initialize Claude Sonnet 3.5 v1 from AWS Bedrock
+    this.model = bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0");
+
+    console.log(`🤖 Claude Sonnet 3.5 v1 Provider initialized with model: anthropic.claude-3-5-sonnet-20240620-v1:0`);
   }
 
   /**
-   * Generate streaming response using Claude Haiku
+   * Generate streaming response using Claude Sonnet 3.5 v1
    */
   async generateStream(messages: any[], options: any = {}) {
     try {
-      console.log(`🤖 Claude Haiku generating stream for ${messages.length} messages`);
+      console.log(`🤖 Claude Sonnet 3.5 v1 generating stream for ${messages.length} messages`);
       
       // Get appropriate prompt from Langfuse based on context
       const prompt = await this.getClaudePrompt(messages);
@@ -46,17 +46,17 @@ export class ClaudeHaikuProvider {
 
       return result.textStream;
     } catch (error) {
-      console.error("❌ Claude Haiku streaming error:", error);
+      console.error("❌ Claude Sonnet 3.5 v1 streaming error:", error);
       throw error;
     }
   }
 
   /**
-   * Generate non-streaming response using Claude Haiku
+   * Generate non-streaming response using Claude Sonnet 3.5 v1
    */
   async generate(messages: any[], options: any = {}) {
     try {
-      console.log(`🤖 Claude Haiku generating response for ${messages.length} messages`);
+      console.log(`🤖 Claude Sonnet 3.5 v1 generating response for ${messages.length} messages`);
       
       // Get appropriate prompt from Langfuse based on context
       const prompt = await this.getClaudePrompt(messages);
@@ -84,7 +84,7 @@ export class ClaudeHaikuProvider {
         finishReason: result.finishReason
       };
     } catch (error) {
-      console.error("❌ Claude Haiku generation error:", error);
+      console.error("❌ Claude Sonnet 3.5 v1 generation error:", error);
       throw error;
     }
   }
@@ -99,11 +99,9 @@ export class ClaudeHaikuProvider {
       const userInput = userMessage?.content || "";
       
       // Determine prompt based on keywords in user input
-      let promptName = "Domestic-general-assistant";
+      let promptName = "Domestic-customer-identification"; // Default to customer identification
       
-      if (userInput.includes("顧客") || userInput.includes("customer") || userInput.includes("識別")) {
-        promptName = "Domestic-customer-identification";
-      } else if (userInput.includes("修理") || userInput.includes("repair") || userInput.includes("メンテナンス")) {
+      if (userInput.includes("修理") || userInput.includes("repair") || userInput.includes("メンテナンス")) {
         promptName = "Domestic-repair-agent";
       } else if (userInput.includes("予約") || userInput.includes("schedule") || userInput.includes("アポイント")) {
         promptName = "Domestic-repair-scheduling";
@@ -121,53 +119,20 @@ export class ClaudeHaikuProvider {
       const prompt = await this.langfuse.getPromptText(promptName, "production");
       
       if (!prompt) {
-        console.warn(`⚠️ No prompt found for ${promptName}, using fallback`);
-        return this.getFallbackPrompt();
+        console.warn(`⚠️ No prompt found for ${promptName}, using minimal fallback`);
+        return "You are a helpful AI assistant. Please respond to user messages.";
       }
       
       return prompt;
     } catch (error) {
       console.error("❌ Error getting Langfuse prompt:", error);
-      return this.getFallbackPrompt();
+      return "You are a helpful AI assistant. Please respond to user messages.";
     }
   }
 
-  /**
-   * Fallback prompt when Langfuse is unavailable
-   */
-  private getFallbackPrompt(): string {
-    return `あなたはサンデン・リテールシステムの修理受付AIアシスタントです。
-
-【役割】
-- 顧客の修理サービスに関する問い合わせに対応
-- 丁寧で親切な日本語での対応
-- 技術的な問題解決のサポート
-
-【出力形式】
-- プレーンテキストのみで回答
-- JSONやコードは出力しない
-- 処理中表記は出力しない
-
-【対応内容】
-1. 顧客識別と認証
-2. 修理履歴の確認
-3. 修理予約の受付
-4. 製品情報の提供
-5. 技術的な問題の分析
-6. 訪問確認のサポート
-
-【言語】
-- 既定は日本語
-- 必要に応じて英語でも対応可能
-
-【会話スタイル】
-- 丁寧で親切
-- 顧客の立場に立った対応
-- 明確で分かりやすい説明`;
-  }
 
   /**
-   * Health check for Claude Haiku
+   * Health check for Claude Sonnet 3.5 v1
    */
   async healthCheck() {
     try {
@@ -187,11 +152,11 @@ export class ClaudeHaikuProvider {
         status: "unhealthy",
         model: this.modelName,
         provider: "aws-bedrock",
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
 }
 
 // Export singleton instance
-export const claudeHaikuProvider = new ClaudeHaikuProvider();
+export const claudeSonnetProvider = new ClaudeSonnetProvider();

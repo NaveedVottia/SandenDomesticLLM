@@ -1,7 +1,8 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { zapierMcp } from "../../../integrations/zapier-mcp";
-import { sharedMemory } from "../../agents/sanden/customer-identification";
+import { zapierMcp } from "../../../integrations/zapier-mcp.js";
+import { sharedMemory } from "../../agents/sanden/customer-identification.js";
+import { extractCustomerId, validateCustomerId, createToolContext } from "../../utils/customer-context.js";
 
 export const createRepairTool = createTool({
   id: "createRepair",
@@ -149,32 +150,21 @@ export const hybridGetRepairsByCustomerIdTool = createTool({
     message: z.string(),
   }),
   execute: async ({ context }: { context: any }) => {
-    let { customerId, sessionId = "default-session" } = context;
-
-    // Try to get customer ID from session data first
-    if (!customerId && context.session && context.session.customerId) {
-      customerId = context.session.customerId;
-      console.log(`🔍 [DEBUG] Retrieved customer ID from session: ${customerId}`);
-    }
-
-    // If still no customerId, try to get it from shared memory
-    if (!customerId) {
-      try {
-        customerId = sharedMemory.get("customerId");
-        console.log(`🔍 [DEBUG] Retrieved customer ID from memory: ${customerId}`);
-      } catch (error) {
-        console.log(`❌ [DEBUG] Error getting customer ID from memory:`, error);
-      }
-    }
-
-    if (!customerId) {
-      console.log(`❌ [DEBUG] No customer ID available for repair history lookup`);
+    // Use standardized customer context handling
+    const toolContext = createToolContext(context);
+    const validation = validateCustomerId(toolContext);
+    
+    if (!validation.isValid) {
+      console.log(`❌ [DEBUG] Customer ID validation failed: ${validation.errorMessage}`);
       return {
         success: false,
         data: null,
-        message: "顧客IDが見つかりません。先に顧客識別を完了してください。",
+        message: validation.errorMessage || "顧客IDが見つかりません。先に顧客識別を完了してください。",
       };
     }
+
+    const customerId = validation.customerId!;
+    const sessionId = toolContext.sessionId || "default-session";
 
     try {
       console.log(`🔍 [DEBUG] Getting repair history for customer ID: ${customerId}`);

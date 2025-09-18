@@ -1,0 +1,103 @@
+{
+  "timestamp": "2025-09-12T02:23:52.855Z",
+  "sessionId": "E2E-1757643832112",
+  "traceId": "29d67418-89bf-4a70-bedf-0933b09d2612",
+  "agentLog": [
+    {
+      "timestamp": "2025-09-12T02:23:52.133Z",
+      "agent": "Domestic-orchestrator",
+      "step": 1,
+      "success": true,
+      "sessionId": "E2E-1757643832112"
+    },
+    {
+      "timestamp": "2025-09-12T02:23:52.382Z",
+      "agent": "Domestic-repair-history-ticket",
+      "step": 2,
+      "success": true,
+      "sessionId": "E2E-1757643832112"
+    },
+    {
+      "timestamp": "2025-09-12T02:23:52.625Z",
+      "agent": "Domestic-repair-agent",
+      "step": 3,
+      "success": true,
+      "sessionId": "E2E-1757643832112"
+    }
+  ],
+  "agentStats": {
+    "Domestic-orchestrator": {
+      "total": 1,
+      "successful": 1,
+      "failed": 0,
+      "successRate": "100.00"
+    },
+    "Domestic-repair-history-ticket": {
+      "total": 1,
+      "successful": 1,
+      "failed": 0,
+      "successRate": "100.00"
+    },
+    "Domestic-repair-agent": {
+      "total": 1,
+      "successful": 1,
+      "failed": 0,
+      "successRate": "100.00"
+    }
+  },
+  "agents": {
+    "Domestic-orchestrator": {
+      "name": "Domestic-orchestrator",
+      "description": "サンデン・リテールシステム修理受付AI , ワークフローオーケストレーター",
+      "tools": [
+        "delegateTo",
+        "forceDelegation",
+        "escalateToHuman",
+        "validateContext",
+        "updateWorkflowState",
+        "logCustomerData",
+        "lookupCustomerFromDatabase",
+        "updateCustomer",
+        "getCustomerHistory",
+        "createProductTool",
+        "updateProductTool",
+        "searchProductsTool",
+        "checkWarrantyStatusTool",
+        "createRepairTool",
+        "updateRepairTool",
+        "getRepairStatusTool",
+        "schedulingTools",
+        "validateSession",
+        "getSystemInfo",
+        "getHelp",
+        "zapierAiQuery"
+      ],
+      "prompt": "Domestic-orchestrator"
+    },
+    "Domestic-repair-history-ticket": {
+      "name": "Domestic-repair-history-ticket",
+      "description": "サンデン・リテールシステム修理受付AI , 問題分析エージェント",
+      "tools": [
+        "repairTools",
+        "customerTools",
+        "commonTools",
+        "memoryTools"
+      ],
+      "prompt": "Domestic-repair-history-ticket"
+    },
+    "Domestic-repair-agent": {
+      "name": "Domestic-repair-agent",
+      "description": "サンデン・リテールシステム修理受付AI , 製品選択エージェント",
+      "tools": [
+        "productTools",
+        "customerTools",
+        "commonTools",
+        "memoryTools",
+        "delegateTo"
+      ],
+      "prompt": "Domestic-repair-agent"
+    }
+  },
+  "uiUrl": "https://demo.dev-maestra.vottia.me/sanden-dev",
+  "langfuseUrl": "https://langfuse.demo.dev-maestra.vottia.me/traces/29d67418-89bf-4a70-bedf-0933b09d2612"
+}

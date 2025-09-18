@@ -1,7 +1,7 @@
 import { createTool } from "@mastra/core/tools";
-import { langfuse } from "../../../integrations/langfuse";
+import { langfuse } from "../../../integrations/langfuse.js";
 import { z } from "zod";
-import { zapierMcp } from "../../../integrations/zapier-mcp";
+import { zapierMcp } from "../../../integrations/zapier-mcp.js";
 
 let mastraInstance: any;
 
@@ -69,7 +69,7 @@ export const delegateTo = createTool({
         { role: "system", content: `Context: ${JSON.stringify(agentContext || {})}` },
         { role: "user", content: message },
       ];
-      const stream = await agent.stream(messages);
+      const stream = await agent.streamVNext(messages, { format: 'aisdk' });
       let fullResponse = "";
       if (stream) {
         for await (const chunk of stream.textStream) {

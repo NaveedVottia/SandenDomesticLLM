@@ -99,11 +99,9 @@ export class ClaudeSonnetProvider {
       const userInput = userMessage?.content || "";
       
       // Determine prompt based on keywords in user input
-      let promptName = "Domestic-general-assistant";
+      let promptName = "Domestic-customer-identification"; // Default to customer identification
       
-      if (userInput.includes("顧客") || userInput.includes("customer") || userInput.includes("識別")) {
-        promptName = "Domestic-customer-identification";
-      } else if (userInput.includes("修理") || userInput.includes("repair") || userInput.includes("メンテナンス")) {
+      if (userInput.includes("修理") || userInput.includes("repair") || userInput.includes("メンテナンス")) {
         promptName = "Domestic-repair-agent";
       } else if (userInput.includes("予約") || userInput.includes("schedule") || userInput.includes("アポイント")) {
         promptName = "Domestic-repair-scheduling";
@@ -121,50 +119,17 @@ export class ClaudeSonnetProvider {
       const prompt = await this.langfuse.getPromptText(promptName, "production");
       
       if (!prompt) {
-        console.warn(`⚠️ No prompt found for ${promptName}, using fallback`);
-        return this.getFallbackPrompt();
+        console.warn(`⚠️ No prompt found for ${promptName}, using minimal fallback`);
+        return "You are a helpful AI assistant. Please respond to user messages.";
       }
       
       return prompt;
     } catch (error) {
       console.error("❌ Error getting Langfuse prompt:", error);
-      return this.getFallbackPrompt();
+      return "You are a helpful AI assistant. Please respond to user messages.";
     }
   }
 
-  /**
-   * Fallback prompt when Langfuse is unavailable
-   */
-  private getFallbackPrompt(): string {
-    return `あなたはサンデン・リテールシステムの修理受付AIアシスタントです。
-
-【役割】
-- 顧客の修理サービスに関する問い合わせに対応
-- 丁寧で親切な日本語での対応
-- 技術的な問題解決のサポート
-
-【出力形式】
-- プレーンテキストのみで回答
-- JSONやコードは出力しない
-- 処理中表記は出力しない
-
-【対応内容】
-1. 顧客識別と認証
-2. 修理履歴の確認
-3. 修理予約の受付
-4. 製品情報の提供
-5. 技術的な問題の分析
-6. 訪問確認のサポート
-
-【言語】
-- 既定は日本語
-- 必要に応じて英語でも対応可能
-
-【会話スタイル】
-- 丁寧で親切
-- 顧客の立場に立った対応
-- 明確で分かりやすい説明`;
-  }
 
   /**
    * Health check for Claude Sonnet 3.5 v2
@@ -187,7 +152,7 @@ export class ClaudeSonnetProvider {
         status: "unhealthy",
         model: this.modelName,
         provider: "aws-bedrock",
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }

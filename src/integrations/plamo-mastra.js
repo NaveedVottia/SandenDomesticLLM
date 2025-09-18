@@ -37,7 +37,13 @@ export class PlamoMastraProvider {
         try {
             // Extract the last user message
             const lastMessage = messages[messages.length - 1];
-            const userInput = lastMessage.content || lastMessage.text || "";
+            let userInput = lastMessage.content || lastMessage.text || "";
+            
+            // Handle Mastra format where content is an array of objects
+            if (Array.isArray(userInput)) {
+                userInput = userInput.map(item => item.text || item.content || "").join(" ");
+            }
+            
             console.log(`🤖 Plamo generating response for: ${userInput.substring(0, 50)}...`);
             // Determine which Langfuse prompt to use based on context
             let promptName = 'Domestic-customer-identification'; // Default
@@ -67,13 +73,8 @@ export class PlamoMastraProvider {
                 const chunk = data.toString().trim();
                 if (chunk) {
                     fullResponse += chunk;
-                    // Emit Mastra-compatible streaming format
-                    const streamChunk = {
-                        type: 'text-delta',
-                        textDelta: chunk,
-                        finishReason: null
-                    };
-                    stream.emit('data', streamChunk);
+                    // Emit Mastra f0ed streaming format
+                    stream.emit('data', { content: chunk });
                     if (isFirstChunk) {
                         isFirstChunk = false;
                     }
@@ -119,7 +120,12 @@ export class PlamoMastraProvider {
             try {
                 // Extract the last user message
                 const lastMessage = messages[messages.length - 1];
-                const userInput = lastMessage.content || lastMessage.text || "";
+                let userInput = lastMessage.content || lastMessage.text || "";
+                
+                // Handle Mastra format where content is an array of objects
+                if (Array.isArray(userInput)) {
+                    userInput = userInput.map(item => item.text || item.content || "").join(" ");
+                }
                 // Determine which Langfuse prompt to use
                 let promptName = 'Domestic-customer-identification'; // Default
                 if (userInput.includes('修理') || userInput.includes('故障') || userInput.includes('問題')) {

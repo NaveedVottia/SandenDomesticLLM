@@ -45,12 +45,14 @@ const delegateToCustomerIdentification = createStep({
         throw new Error("Customer identification agent not found");
       }
       
-      // Call the customer identification agent
-      const stream = await customerAgent.stream([
+      // Call the customer identification agent using SDKv5 streamVNext
+      const stream = await customerAgent.streamVNext([
         { role: "user", content: "顧客識別をお願いします" }
-      ]);
-      
-      // Collect the response
+      ], {
+        format: 'aisdk'
+      });
+
+      // Collect the response using SDKv5 stream format
       let fullResponse = "";
       for await (const chunk of stream.textStream) {
         if (typeof chunk === "string") {

@@ -16,10 +16,10 @@ console.log("LANGFUSE_PUBLIC_KEY:", process.env.LANGFUSE_PUBLIC_KEY ? "✅ Set" 
 console.log("LANGFUSE_SECRET_KEY:", process.env.LANGFUSE_SECRET_KEY ? "✅ Set" : "❌ Missing");
 
 // Import all agents
-import { routingAgentCustomerIdentification } from "./agents/sanden/customer-identification";
-import { repairAgentProductSelection } from "./agents/sanden/product-selection";
-import { repairQaAgentIssueAnalysis } from "./agents/sanden/issue-analysis";
-import { repairVisitConfirmationAgent } from "./agents/sanden/visit-confirmation";
+import { routingAgentCustomerIdentification } from "./agents/sanden/customer-identification.js";
+import { repairAgentProductSelection } from "./agents/sanden/product-selection.js";
+import { repairQaAgentIssueAnalysis } from "./agents/sanden/issue-analysis.js";
+import { repairVisitConfirmationAgent } from "./agents/sanden/visit-confirmation.js";
 
 // Create agents asynchronously
 async function createMastraInstance() {

@@ -1,0 +1,49 @@
+{
+  "timestamp": "2025-09-12T02:17:56.975Z",
+  "sessionId": "E2E-1757643476222",
+  "testResults": [
+    {
+      "timestamp": "2025-09-12T02:17:56.226Z",
+      "step": 1,
+      "description": "Customer Data Lookup - セブンイレブン 秋葉原店",
+      "agent": "Domestic-orchestrator",
+      "tool": "lookupCustomerFromDatabase",
+      "prompt": "Find customer data for セブンイレブン 秋葉原店",
+      "data": null,
+      "success": false,
+      "sessionId": "E2E-1757643476222",
+      "error": "No valid response received"
+    },
+    {
+      "timestamp": "2025-09-12T02:17:56.493Z",
+      "step": 2,
+      "description": "Repair History Lookup - CUST004",
+      "agent": "Domestic-repair-history-ticket",
+      "tool": "getCustomerHistory",
+      "prompt": "Find repair history for customer CUST004",
+      "data": null,
+      "success": false,
+      "sessionId": "E2E-1757643476222",
+      "error": "No valid response received"
+    },
+    {
+      "timestamp": "2025-09-12T02:17:56.734Z",
+      "step": 3,
+      "description": "New Repair Booking Creation - September 18th, 6pm",
+      "agent": "Domestic-repair-agent",
+      "tool": "createRepairTool",
+      "prompt": "Create a new repair booking for September 18th, 6pm visit for セブンイレブン 秋葉原店, automatic vending machine maintenance needed. Repair ID: REP1757643476734",
+      "data": null,
+      "success": false,
+      "sessionId": "E2E-1757643476222",
+      "error": "No valid response received"
+    }
+  ],
+  "summary": {
+    "totalSteps": 3,
+    "successfulSteps": 0,
+    "failedSteps": 3,
+    "totalTime": 0.753
+  },
+  "uiUrl": "https://demo.dev-maestra.vottia.me/sanden-dev"
+}

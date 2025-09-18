@@ -1,0 +1,40 @@
+{
+  "timestamp": "2025-09-12T02:16:22.515Z",
+  "sessionId": "E2E-1757643381656",
+  "testResults": [
+    {
+      "timestamp": "2025-09-12T02:16:21.660Z",
+      "step": 1,
+      "description": "Customer Data Lookup - セブンイレブン 秋葉原店",
+      "data": null,
+      "success": false,
+      "sessionId": "E2E-1757643381656",
+      "error": "HTTP 405: Method Not Allowed"
+    },
+    {
+      "timestamp": "2025-09-12T02:16:22.074Z",
+      "step": 2,
+      "description": "Repair History Lookup - CUST004",
+      "data": null,
+      "success": false,
+      "sessionId": "E2E-1757643381656",
+      "error": "HTTP 405: Method Not Allowed"
+    },
+    {
+      "timestamp": "2025-09-12T02:16:22.310Z",
+      "step": 3,
+      "description": "New Repair Booking Creation - September 18th, 6pm",
+      "data": null,
+      "success": false,
+      "sessionId": "E2E-1757643381656",
+      "error": "HTTP 405: Method Not Allowed"
+    }
+  ],
+  "summary": {
+    "totalSteps": 3,
+    "successfulSteps": 0,
+    "failedSteps": 3,
+    "totalTime": 0.859
+  },
+  "uiUrl": "https://demo.dev-maestra.vottia.me/sanden-dev"
+}

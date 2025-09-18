@@ -1,0 +1,51 @@
+{
+  "timestamp": "2025-09-12T02:13:36.550Z",
+  "testResults": [
+    {
+      "timestamp": "2025-09-12T02:13:35.274Z",
+      "step": 1,
+      "description": "Testing Direct Zapier MCP Connection",
+      "data": null,
+      "success": false,
+      "error": "HTTP 405: Method Not Allowed"
+    },
+    {
+      "timestamp": "2025-09-12T02:13:35.603Z",
+      "step": 2,
+      "description": "Testing Customer Data Lookup",
+      "data": null,
+      "success": false,
+      "error": "HTTP 405: Method Not Allowed"
+    },
+    {
+      "timestamp": "2025-09-12T02:13:35.826Z",
+      "step": 3,
+      "description": "Testing Repair History Lookup",
+      "data": null,
+      "success": false,
+      "error": "HTTP 405: Method Not Allowed"
+    },
+    {
+      "timestamp": "2025-09-12T02:13:36.039Z",
+      "step": 4,
+      "description": "Testing New Repair Booking Creation",
+      "data": null,
+      "success": false,
+      "error": "HTTP 405: Method Not Allowed"
+    },
+    {
+      "timestamp": "2025-09-12T02:13:36.325Z",
+      "step": 5,
+      "description": "Testing Log Entry Creation",
+      "data": null,
+      "success": false,
+      "error": "HTTP 405: Method Not Allowed"
+    }
+  ],
+  "summary": {
+    "totalSteps": 5,
+    "successfulSteps": 0,
+    "failedSteps": 5,
+    "totalTime": 1.28
+  }
+}

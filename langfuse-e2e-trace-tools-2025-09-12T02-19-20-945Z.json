@@ -1,0 +1,105 @@
+{
+  "timestamp": "2025-09-12T02:19:20.946Z",
+  "sessionId": "E2E-1757643560046",
+  "traceId": "trace-E2E-1757643560046",
+  "toolLog": [
+    {
+      "timestamp": "2025-09-12T02:19:20.097Z",
+      "tool": "lookupCustomerFromDatabase",
+      "agent": "Domestic-orchestrator",
+      "step": 1,
+      "success": true,
+      "sessionId": "E2E-1757643560046"
+    },
+    {
+      "timestamp": "2025-09-12T02:19:20.384Z",
+      "tool": "google_sheets_lookup_spreadsheet_rows_advanced",
+      "agent": "Domestic-orchestrator",
+      "prompt": "Find customer data for セブンイレブン 秋葉原店",
+      "params": {
+        "instructions": "Find customer data for セブンイレブン 秋葉原店",
+        "lookup_key": "会社名",
+        "lookup_value": "セブンイレブン 秋葉原店"
+      },
+      "error": "No valid response received",
+      "success": false,
+      "sessionId": "E2E-1757643560046"
+    },
+    {
+      "timestamp": "2025-09-12T02:19:20.384Z",
+      "tool": "getCustomerHistory",
+      "agent": "Domestic-repair-history-ticket",
+      "step": 2,
+      "success": true,
+      "sessionId": "E2E-1757643560046"
+    },
+    {
+      "timestamp": "2025-09-12T02:19:20.674Z",
+      "tool": "google_sheets_lookup_spreadsheet_rows_advanced",
+      "agent": "Domestic-repair-history-ticket",
+      "prompt": "Find repair history for customer CUST004",
+      "params": {
+        "instructions": "Find repair history for customer CUST004",
+        "lookup_key": "顧客ID",
+        "lookup_value": "CUST004"
+      },
+      "error": "No valid response received",
+      "success": false,
+      "sessionId": "E2E-1757643560046"
+    },
+    {
+      "timestamp": "2025-09-12T02:19:20.674Z",
+      "tool": "createRepairTool",
+      "agent": "Domestic-repair-agent",
+      "step": 3,
+      "success": true,
+      "sessionId": "E2E-1757643560046"
+    },
+    {
+      "timestamp": "2025-09-12T02:19:20.942Z",
+      "tool": "google_sheets_create_spreadsheet_row",
+      "agent": "Domestic-repair-agent",
+      "prompt": "Create a new repair booking for September 18th, 6pm visit for セブンイレブン 秋葉原店, automatic vending machine maintenance needed. Repair ID: REP1757643560674",
+      "params": {
+        "instructions": "Create a new repair booking for September 18th, 6pm visit for セブンイレブン 秋葉原店, automatic vending machine maintenance needed. Repair ID: REP1757643560674"
+      },
+      "error": "No valid response received",
+      "success": false,
+      "sessionId": "E2E-1757643560046"
+    }
+  ],
+  "toolStats": {
+    "lookupCustomerFromDatabase": {
+      "total": 1,
+      "successful": 1,
+      "failed": 0,
+      "successRate": "100.00"
+    },
+    "google_sheets_lookup_spreadsheet_rows_advanced": {
+      "total": 2,
+      "successful": 0,
+      "failed": 2,
+      "successRate": "0.00"
+    },
+    "getCustomerHistory": {
+      "total": 1,
+      "successful": 1,
+      "failed": 0,
+      "successRate": "100.00"
+    },
+    "createRepairTool": {
+      "total": 1,
+      "successful": 1,
+      "failed": 0,
+      "successRate": "100.00"
+    },
+    "google_sheets_create_spreadsheet_row": {
+      "total": 1,
+      "successful": 0,
+      "failed": 1,
+      "successRate": "0.00"
+    }
+  },
+  "uiUrl": "https://demo.dev-maestra.vottia.me/sanden-dev",
+  "langfuseUrl": "https://langfuse.demo.dev-maestra.vottia.me/traces/trace-E2E-1757643560046"
+}

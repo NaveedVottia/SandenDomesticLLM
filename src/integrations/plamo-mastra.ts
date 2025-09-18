@@ -44,8 +44,7 @@ export class PlamoMastraProvider {
       return formattedPrompt;
     } catch (error) {
       console.error(`❌ Error fetching Langfuse prompt '${promptName}':`, error);
-      // Fallback to direct prompt if Langfuse fails
-      return context.message || "こんにちは、何かお手伝いできることはありますか？";
+      throw error; // No fallback - Langfuse only
     }
   }
 

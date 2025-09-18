@@ -34,8 +34,8 @@ import {
   getHelp, 
   zapierAiQuery 
 } from "../../tools/sanden/common-tools.js";
-import { loadLangfusePrompt } from "../../prompts/langfuse";
-import { langfuse } from "../../../integrations/langfuse";
+import { loadLangfusePrompt } from "../../prompts/langfuse.js";
+import { langfuse } from "../../../integrations/langfuse.js";
 
 // Create agent factory function that loads prompt after environment is ready
 export async function createWorkingOrchestratorAgent() {
@@ -55,7 +55,7 @@ export async function createWorkingOrchestratorAgent() {
     name: "Domestic-orchestrator",
     description: "サンデン・リテールシステム修理受付AI , ワークフローオーケストレーター",
     instructions: ORCHESTRATOR_INSTRUCTIONS,
-    model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+    model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0"),
     tools: {
       delegateTo,
       forceDelegation,

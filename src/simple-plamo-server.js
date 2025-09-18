@@ -39,10 +39,10 @@ app.get('/api/claude/health', async (req, res) => {
   }
 });
 
-// Main streaming endpoint with model selection (Mastra f0ed format)
+// Main streaming endpoint with Plamo only (Mastra f0ed format)
 app.post('/api/test/stream', async (req, res) => {
   try {
-    const { messages, stream = true, model = 'claude' } = req.body;
+    const { messages, stream = true, model = 'plamo' } = req.body;
     
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Messages array is required' });
@@ -64,37 +64,20 @@ app.post('/api/test/stream', async (req, res) => {
     let fullContent = '';
     let tokenCount = 0;
 
-    // Route to appropriate model provider
-    if (model === 'claude' || model === 'claude-sonnet') {
-      // Use Claude Sonnet 3.5
-      const streamResponse = await claudeProvider.generateStream(messages, {
-        temperature: 0.7,
-        max_tokens: 1000
-      });
+    // Use Plamo only
+    console.log(`🤖 Using Plamo model for streaming`);
+    const streamResponse = await plamoProvider.generateStream(messages, {
+      temperature: 0.7,
+      max_tokens: 1000
+    });
 
-      // Stream the response in Mastra f0ed format
-      for await (const chunk of streamResponse) {
-        fullContent += chunk;
+    // Stream the response in Mastra f0ed format
+    for await (const chunk of streamResponse) {
+      if (chunk.content) {
+        fullContent += chunk.content;
         tokenCount++;
-        res.write(`0:"${chunk}"\n`);
+        res.write(`0:"${chunk.content}"\n`);
       }
-    } else if (model === 'plamo') {
-      // Use Plamo
-      const streamResponse = await plamoProvider.generateStream(messages, {
-        temperature: 0.7,
-        max_tokens: 1000
-      });
-
-      // Stream the response in Mastra f0ed format
-      for await (const chunk of streamResponse) {
-        if (chunk.content) {
-          fullContent += chunk.content;
-          tokenCount++;
-          res.write(`0:"${chunk.content}"\n`);
-        }
-      }
-    } else {
-      throw new Error(`Unsupported model: ${model}. Available: claude, plamo`);
     }
     
     // Send end markers
@@ -115,10 +98,10 @@ app.post('/api/test/stream', async (req, res) => {
       } 
     })}\n`);
     
-    console.log(`✅ ${model} stream complete, length: ${fullContent.length} characters`);
+    console.log(`✅ Plamo stream complete, length: ${fullContent.length} characters`);
     res.end();
   } catch (error) {
-    console.error(`${model || 'unknown'} streaming error:`, error);
+    console.error(`Plamo streaming error:`, error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -170,7 +153,7 @@ app.get('/api/test', (req, res) => {
     message: 'Multi-model server is running',
     timestamp: new Date().toISOString(),
     port: PORT,
-    models: ['claude-sonnet-3.5-v2', 'plamo'],
+    models: ['plamo'],
     endpoints: {
       streaming: '/api/test/stream',
       claude: {
@@ -195,7 +178,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🔧 Plamo generate: http://localhost/api/plamo/generate`);
   console.log(`🧪 Test: http://localhost/api/test`);
   console.log(`🎯 UI endpoint: https://demo.dev-maestra.vottia.me/sanden-dev`);
-  console.log(`🤖 Available models: claude-sonnet-3.5-v2 (default), plamo`);
+  console.log(`🤖 Available models: plamo (default)`);
 });
 
 export default app;

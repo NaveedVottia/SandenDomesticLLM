@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-09-12T02:23:52.855Z",
+  "sessionId": "E2E-1757643832112",
+  "traceId": "29d67418-89bf-4a70-bedf-0933b09d2612",
+  "records": {
+    "customerLookup": null,
+    "repairHistory": null,
+    "newBooking": null,
+    "logEntry": null,
+    "dataVerification": null
+  },
+  "conversationLog": [],
+  "uiUrl": "https://demo.dev-maestra.vottia.me/sanden-dev",
+  "langfuseUrl": "https://langfuse.demo.dev-maestra.vottia.me/traces/29d67418-89bf-4a70-bedf-0933b09d2612"
+}

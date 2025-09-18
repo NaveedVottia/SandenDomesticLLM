@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createTool } from "@mastra/core/tools";
-import { zapierMcp } from "../../../integrations/zapier-mcp";
+import { zapierMcp } from "../../../integrations/zapier-mcp.js";
 
 // Import types and functions from orchestrator-tools
 type ToolExecuteArgs = { input?: any; context?: any; writer?: any; mastra?: any };

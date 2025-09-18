@@ -1,7 +1,8 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { zapierMcp } from "../../../integrations/zapier-mcp";
-import { sharedMemory } from "../../agents/sanden/customer-identification";
+import { zapierMcp } from "../../../integrations/zapier-mcp.js";
+import { sharedMemory } from "../../agents/sanden/customer-identification.js";
+import { extractCustomerId, validateCustomerId, createToolContext } from "../../utils/customer-context.js";
 
 export const createSchedulingEntry = createTool({
   id: "google_sheets_create_spreadsheet_row",
