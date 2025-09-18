@@ -30,16 +30,29 @@ try {
   REPAIR_HISTORY_INSTRUCTIONS = "You are a helpful AI assistant. Please respond to user messages.";
 }
 
-export const repairQaAgentIssueAnalysis = new Agent({
-  name: "Domestic-repair-history-ticket",
-  description: "サンデン・リテールシステム修理受付AI , 問題分析エージェント",
-  instructions: REPAIR_HISTORY_INSTRUCTIONS,
-  model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0"),
-  tools: {
-    ...repairTools,
-    ...customerTools,
-    ...commonTools,
-    ...memoryTools,
-  },
-  memory: sharedMemory,
-});
+// Wrap agent creation in try-catch to prevent server crash
+let repairQaAgentIssueAnalysis: Agent;
+try {
+  repairQaAgentIssueAnalysis = new Agent({
+    name: "Domestic-repair-history-ticket",
+    description: "サンデン・リテールシステム修理受付AI , 問題分析エージェント",
+    instructions: REPAIR_HISTORY_INSTRUCTIONS,
+    model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0"),
+    tools: {
+      ...repairTools,
+    },
+  });
+  console.log("✅ SDKv5 Issue Analysis Agent created");
+} catch (error) {
+  console.error("❌ Failed to create Issue Analysis Agent:", error);
+  // Create a minimal fallback agent
+  repairQaAgentIssueAnalysis = new Agent({
+    name: "Domestic-repair-history-ticket",
+    description: "サンデン・リテールシステム修理受付AI , 問題分析エージェント",
+    instructions: "You are a helpful AI assistant. Please respond to user messages.",
+    model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0"),
+    tools: {},
+  });
+}
+
+export { repairQaAgentIssueAnalysis };

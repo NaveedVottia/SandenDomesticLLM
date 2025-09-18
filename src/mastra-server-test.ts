@@ -22,8 +22,6 @@ interface SessionData {
   currentAgent?: string;
   conversationStep?: string;
   lastInteraction?: number;
-  conversationHistory?: Array<{role: string, content: string}>;
-  customerInfoConfirmed?: boolean;
 }
 
 const sessionStore = new Map<string, SessionData>();
@@ -32,11 +30,7 @@ const sessionStore = new Map<string, SessionData>();
 function getSession(sessionId: string): SessionData {
   if (!sessionStore.has(sessionId)) {
     sessionStore.set(sessionId, {
-      lastInteraction: Date.now(),
-      conversationHistory: [],
-      currentAgent: 'customer-identification',
-      conversationStep: 'initial',
-      customerInfoConfirmed: false
+      lastInteraction: Date.now()
     });
   }
   return sessionStore.get(sessionId)!;
@@ -76,8 +70,7 @@ const corsOptions = {
       'https://dz5upvjnk4ew0.cloudfront.net'
     ];
 
-    // Temporarily allow all origins for testing
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.CORS_ORIGIN === '*' || true) {
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.CORS_ORIGIN === '*') {
       return callback(null, true);
     }
 
@@ -85,163 +78,29 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET','HEAD','OPTIONS','POST','PUT','PATCH','DELETE'],
-  // Reflect requested headers to avoid CORS preflight mismatches
-  allowedHeaders: function (req: Request, cb: any) {
-    cb(null, req.header('Access-Control-Request-Headers') || 'Content-Type,Accept,Authorization,X-Session-ID,X-Requested-With');
-  },
+  allowedHeaders: ['Content-Type','Accept','Authorization','X-Session-ID','X-Requested-With'],
   exposedHeaders: ['Content-Type','X-Accel-Buffering'],
-  optionsSuccessStatus: 204,
-  maxAge: 600
-} as any;
-
-// Ensure caches vary by Origin and preflight headers
-// Temporarily disabled for testing
-// app.use((req, res, next) => {
-//   const existing = res.getHeader('Vary');
-//   const varyValue = 'Origin, Access-Control-Request-Method, Access-Control-Request-Headers';
-//   if (!existing) {
-//     res.setHeader('Vary', varyValue);
-//   } else if (typeof existing === 'string' && !existing.includes('Origin')) {
-//     res.setHeader('Vary', existing + ', ' + varyValue);
-//   }
-//   next();
-// });
+  optionsSuccessStatus: 204
+};
 
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve static files from the project root
-app.use(express.static('.'));
+// Reverse Proxy for Production/Development Routing
+app.use('/api', (req: Request, res: Response, next) => {
+  const referer = req.headers.referer || '';
+  const userAgent = req.headers['user-agent'] || '';
 
-// Debug middleware to log all requests
-app.use((req, res, next) => {
-  console.log(`🔍 ${req.method} ${req.path} - Headers:`, JSON.stringify(req.headers, null, 2));
-  next();
+  console.log(`🔀 Reverse proxy check: ${req.method} ${req.path}`);
+  console.log(`   Referer: ${referer}`);
+  console.log(`   User-Agent: ${userAgent}`);
+
+  // For now, route ALL /api/* requests to development backend
+  // This ensures the backend works even if CloudFront routing is not configured
+  console.log(`🔀 Routing ALL /api/* to DEVELOPMENT backend`);
+  return next();
 });
-
-// Serve the playground HTML file
-app.get('/', (req: Request, res: Response) => {
-  console.log('🎮 Root route called:', req.path, req.method);
-  res.sendFile('playground.html', { root: '.' });
-});
-
-// Serve the chat interface
-app.get('/chat', (req: Request, res: Response) => {
-  console.log('💬 Chat route called:', req.path, req.method);
-  res.sendFile('chat.html', { root: '.' });
-});
-
-// Legacy root endpoint
-app.get('/playground', (req: Request, res: Response) => {
-  res.redirect('/');
-});
-
-// Proxy for UI domain requests to /sanden-dev/api/*
-app.use('/sanden-dev/api/health', async (req: Request, res: Response) => {
-  console.log(`🔀 UI Proxy: ${req.method} ${req.originalUrl} -> /api/health`);
-
-  // Handle health check directly
-  try {
-    console.log("🔍 Mastra backend health check (proxied)...");
-
-    // Add timeout to prevent hanging
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Health check timeout")), 5000); // 5 second timeout
-    });
-
-    const mastraPromiseWithTimeout = Promise.race([mastraPromise, timeoutPromise]);
-    const mastra = await mastraPromiseWithTimeout;
-
-    // Test basic functionality
-    const healthStatus = {
-      status: "healthy",
-      timestamp: new Date().toISOString(),
-      mastra: "initialized",
-      agents: {
-        available: mastra.agents ? Object.keys(mastra.agents) : [],
-        count: mastra.agents ? Object.keys(mastra.agents).length : 0
-      },
-      integrations: {
-        langfuse: "connected",
-        plamo: "available"
-      }
-    };
-
-    console.log("✅ Mastra backend health check passed (proxied)");
-    res.json(healthStatus);
-  } catch (error) {
-    console.error("❌ Mastra backend health check failed (proxied):", error);
-    res.status(500).json({
-      status: "unhealthy",
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-// Proxy for streaming endpoint - DISABLED to avoid conflict with handleTestStream
-/*
-app.post('/sanden-dev/api/test/stream', async (req: Request, res: Response) => {
-  console.log(`🔀 UI Proxy: ${req.method} ${req.originalUrl} -> /api/test/stream`);
-
-  const { messages, tools = {}, unstable_assistantMessageId, runConfig = {} } = req.body;
-
-  if (!messages || !Array.isArray(messages)) {
-    return res.status(400).json({ error: "Messages array is required" });
-  }
-
-  console.log(`🤖 AI SDK v5 UI test stream request (proxied), messages: ${messages.length}`);
-
-  // Handle the streaming request directly in AI SDK v5 UI SSE format
-  try {
-    // Normalize messages to handle complex UI format (supports content[] and parts[])
-    const normalizedMessages = messages.map((msg: any) => {
-      const role = msg.role || 'user';
-      // AI SDK v5 style: msg.content is array of { type, text }
-      if (Array.isArray(msg.content)) {
-        const textContent = msg.content
-          .filter((item: any) => (item.type === 'text' || item.type === 'input_text') && item.text)
-          .map((item: any) => item.text)
-          .join(' ');
-        return { role, content: textContent };
-      }
-      // Alternate UI shape: msg.parts is array of { type, text }
-      if (Array.isArray(msg.parts)) {
-        const textContent = msg.parts
-          .filter((p: any) => (p.type === 'text' || p.type === 'input_text') && (p.text || p.content))
-          .map((p: any) => p.text || p.content)
-          .join(' ');
-        return { role, content: textContent };
-      }
-      // Plain string content
-      if (typeof msg.content === 'string') {
-        return { role, content: msg.content };
-      }
-      return msg;
-    });
-
-    const agentId = "customer-identification";
-    const agent = await getAgentById(agentId);
-    if (!agent) {
-      return res.status(404).json({ error: `Agent '${agentId}' not found` });
-    }
-
-    const resolvedAgent = await agent;
-    console.log(`🤖 [SDKv5] Using streamVNext (UI) for test endpoint: ${agentId}`);
-
-    const stream = await resolvedAgent.streamVNext(normalizedMessages, { format: 'aisdk' });
-    return stream.toUIMessageStreamResponse();
-
-  } catch (error) {
-    console.error(`❌ [Endpoint] /sanden-dev/api/test/stream error:`, error);
-    res.status(500).json({
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-*/
 
 // Mastra Backend API Endpoints
 
@@ -249,15 +108,8 @@ app.post('/sanden-dev/api/test/stream', async (req: Request, res: Response) => {
 app.get("/api/health", async (req: Request, res: Response) => {
   try {
     console.log("🔍 Mastra backend health check...");
-
-    // Add timeout to prevent hanging
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Health check timeout")), 5000); // 5 second timeout
-    });
-
-    const mastraPromiseWithTimeout = Promise.race([mastraPromise, timeoutPromise]);
-    const mastra = await mastraPromiseWithTimeout;
-
+    const mastra = await mastraPromise;
+    
     // Test basic functionality
     const healthStatus = {
       status: "healthy",
@@ -272,19 +124,47 @@ app.get("/api/health", async (req: Request, res: Response) => {
         plamo: "available"
       }
     };
-
+    
     console.log("✅ Mastra backend health check passed");
     res.json(healthStatus);
   } catch (error) {
     console.error("❌ Mastra backend health check failed:", error);
-    res.status(500).json({
-      status: "unhealthy",
+    res.status(500).json({ 
+      status: "unhealthy", 
       error: error instanceof Error ? error.message : "Unknown error",
       timestamp: new Date().toISOString()
     });
   }
 });
 
+// Alias for UI path prefix
+app.get("/sanden-dev/api/health", async (req: Request, res: Response) => {
+  try {
+    console.log("🔍 Mastra backend health check (prefixed)...");
+    const mastra = await mastraPromise;
+    const healthStatus = {
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      mastra: "initialized",
+      agents: {
+        available: mastra.agents ? Object.keys(mastra.agents) : [],
+        count: mastra.agents ? Object.keys(mastra.agents).length : 0
+      },
+      integrations: {
+        langfuse: "connected",
+        plamo: "available"
+      }
+    };
+    res.json(healthStatus);
+  } catch (error) {
+    console.error("❌ Mastra backend health check failed (prefixed):", error);
+    res.status(500).json({ 
+      status: "unhealthy", 
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString()
+    });
+  }
+});
 
 // GET /api/llm-runs - Returns array of LLM runs
 app.get("/api/llm-runs", async (req: Request, res: Response) => {
@@ -1047,104 +927,40 @@ app.post("/api/agents/repair-scheduling/stream", async (req: Request, res: Respo
 // AI SDK v5 Compatible Streaming Endpoints for UI
 
 // Test endpoint that the UI expects (defaults to customer-identification agent)
-// Simplified version that exactly matches the working test endpoint
 async function handleTestStream(req: Request, res: Response) {
-  console.log(`🚀 [START] handleTestStream called for: ${req.path}`);
-
   try {
-    const messages = Array.isArray(req.body?.messages) ? req.body.messages : [];
+    const { messages, tools = {}, unstable_assistantMessageId, runConfig = {} } = req.body;
+
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: "Messages array is required" });
     }
 
-    console.log(`🤖 [SDKv5] /api/test/stream request, messages: ${messages.length}`);
+    console.log(`🤖 AI SDK v5 UI test stream request, messages: ${messages.length}`);
 
-    // Get session for conversation context
-    const sessionId = getSessionId(req);
-    const session = getSession(sessionId);
-    console.log(`🔍 Session:`, JSON.stringify(session, null, 2));
-
-    console.log(`🤖 [SDKv5] /api/test/stream request, messages: ${messages.length}`);
-    console.log(`🤖 [DEBUG] Raw messages:`, JSON.stringify(messages, null, 2));
-    console.log(`🤖 [DEBUG] Message types:`, messages.map((m, i) => ({ index: i, type: typeof m, keys: Object.keys(m || {}) })));
-
-    // Filter out non-message objects (like session data) that might have been accidentally included
-    const validMessages = messages.filter((msg: any) => {
-      const isValid = msg && typeof msg === 'object' && typeof msg.role === 'string' && (msg.content || msg.parts);
-      if (!isValid) {
-        console.log(`🤖 [DEBUG] Filtering out invalid message object:`, msg);
+    // Normalize messages to handle complex UI format (same as customer-identification endpoint)
+    const normalizedMessages = messages.map((msg: any) => {
+      if (msg.role === 'user' && Array.isArray(msg.content)) {
+        // Extract text from content array format
+        const textContent = msg.content
+          .filter((item: any) => item.type === 'text' && item.text)
+          .map((item: any) => item.text)
+          .join(' ');
+        return { role: 'user', content: textContent };
+      } else if (msg.role === 'assistant' && Array.isArray(msg.content)) {
+        // Extract text from assistant content array format
+        const textContent = msg.content
+          .filter((item: any) => item.type === 'text' && item.text)
+          .map((item: any) => item.text)
+          .join(' ');
+        return { role: 'assistant', content: textContent };
       }
-      return isValid;
+      return msg;
     });
 
-    console.log(`🤖 [DEBUG] Valid messages count: ${validMessages.length}`);
+    // Default to customer-identification agent for test endpoint
+    const agentId = "customer-identification";
 
-    // Normalize complex UI message format to plain text messages (supports content[] and parts[])
-    const normalizedMessages = validMessages
-      .filter((msg: any) => {
-        // Additional filter for any remaining invalid messages
-        const isValid = msg && typeof msg === 'object' && (msg.role || msg.content);
-        if (!isValid) {
-          console.log(`🤖 [DEBUG] Additional filtering out invalid message:`, msg);
-        }
-        return isValid;
-      })
-      .map((msg: any) => {
-        const role = msg.role || 'user';
-        if (Array.isArray(msg.content)) {
-          const textContent = msg.content
-            .filter((item: any) => (item.type === 'text' || item.type === 'input_text') && item.text)
-            .map((item: any) => item.text)
-            .join(' ');
-          return { role, content: textContent };
-        }
-        if (Array.isArray(msg.parts)) {
-          const textContent = msg.parts
-            .filter((p: any) => (p.type === 'text' || p.type === 'input_text') && (p.text || p.content))
-            .map((p: any) => p.text || p.content)
-            .join(' ');
-          return { role, content: textContent };
-        }
-        if (typeof msg.content === 'string') {
-          return { role, content: msg.content };
-        }
-        // If message doesn't have valid content, create a fallback
-        return { role, content: 'Hello' };
-      });
-
-    console.log(`🤖 [DEBUG] Normalized messages:`, JSON.stringify(normalizedMessages, null, 2));
-
-    // For now, just use the latest messages without conversation history
-    const fullMessages = normalizedMessages;
-
-    // Update conversation history - avoid duplicates by checking if the last message is the same
-    if (!session.conversationHistory) {
-      session.conversationHistory = [];
-    }
-
-    // Only add messages that aren't already in the history
-    const lastMessage = session.conversationHistory[session.conversationHistory.length - 1];
-    const currentMessage = normalizedMessages[normalizedMessages.length - 1];
-
-    if (!lastMessage || lastMessage.content !== currentMessage?.content || lastMessage.role !== currentMessage?.role) {
-      session.conversationHistory.push(...normalizedMessages);
-    }
-
-    // Determine which agent to use based on session state
-    let agentId = session.currentAgent || "customer-identification";
-
-    // Simple logic to switch agents based on conversation progress
-    if (session.customerInfoConfirmed) {
-      if (session.conversationStep === 'repair_history') {
-        agentId = 'repair-history-ticket';
-      } else if (session.conversationStep === 'repair_products') {
-        agentId = 'repair-agent';
-      } else if (session.conversationStep === 'repair_scheduling') {
-        agentId = 'repair-scheduling';
-      }
-    }
-
-    console.log(`🎯 Using agent: ${agentId} for session: ${sessionId}`);
+    // Get the agent
     const agent = await getAgentById(agentId);
     if (!agent) {
       return res.status(404).json({ error: `Agent '${agentId}' not found` });
@@ -1152,105 +968,86 @@ async function handleTestStream(req: Request, res: Response) {
 
     const resolvedAgent = await agent;
 
-    // Set proper headers for Server-Sent Events (SSE)
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    console.log(`🔍 Agent methods available:`, Object.getOwnPropertyNames(Object.getPrototypeOf(resolvedAgent)));
 
-    try {
-      console.log('🔍 Starting stream processing with full context...');
-      console.log('🔍 Full messages context:', JSON.stringify(fullMessages, null, 2));
+        // Use Mastra streamVNext and convert to f0ed protocol for UI compatibility
+        console.log(`🤖 [Mastra streamVNext] Using streamVNext for test endpoint: ${agentId}`);
 
-      // Temporarily remove memory configuration to test basic functionality
-      const stream = await resolvedAgent.streamVNext(fullMessages, {
-        format: 'aisdk'
-      });
-      console.log('🔍 Stream object type:', typeof stream);
+        const stream = await resolvedAgent.streamVNext(normalizedMessages, { format: 'aisdk' });
 
-      // Collect the response using the exact same pattern as the working test endpoint
-      console.log('🔍 Collecting stream response...');
+        // Prepare headers for Mastra streaming protocol
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        res.flushHeaders();
 
-      let textResult = "";
-      try {
-        for await (const chunk of stream.textStream) {
-          if (typeof chunk === 'string') {
-            textResult += chunk;
+        // Generate a unique message ID
+        const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        // Send the message ID first
+        res.write(`f:{"messageId":"${messageId}"}\n`);
+
+        // Try to access textStream from streamVNext
+        let totalLength = 0;
+        if (stream.textStream) {
+          for await (const chunk of stream.textStream) {
+            if (typeof chunk === 'string' && chunk.trim()) {
+              totalLength += chunk.length;
+              // Split into characters and emit each as a separate 0: line
+              for (const ch of chunk) {
+                const escaped = ch.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+                res.write(`0:"${escaped}"\n`);
+              }
+            }
+          }
+        } else {
+          // Fallback: convert SSE data to f0ed format
+          const reader = stream.getReader();
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              if (value && typeof value === 'string') {
+                // Parse SSE data and extract text
+                const lines = value.split('\n');
+                for (const line of lines) {
+                  if (line.startsWith('data: ')) {
+                    try {
+                      const data = JSON.parse(line.slice(6));
+                      if (data.type === 'text' && data.content) {
+                        for (const ch of data.content) {
+                          const escaped = ch.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+                          res.write(`0:"${escaped}"\n`);
+                          totalLength++;
+                        }
+                      }
+                    } catch (e) {
+                      // Skip invalid JSON
+                    }
+                  }
+                }
+              }
+            }
+          } finally {
+            reader.releaseLock();
           }
         }
-        console.log('🔍 Collected text result:', textResult);
-      } catch (error) {
-        console.error('🔍 Error collecting stream:', error);
-        textResult = 'Sorry, there was an error processing your request.';
-      }
 
-      // Send as proper SSE format
-      console.log('🔍 Sending SSE response...');
-      res.write(`data: ${JSON.stringify({ text: textResult })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true, finishReason: 'stop' })}\n\n`);
-      res.end();
+        // Send finish metadata
+        res.write(`e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":${totalLength}},"isContinued":false}\n`);
+        res.write(`d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":${totalLength}}}\n`);
 
-      // Update session with AI response
-      if (session.conversationHistory && Array.isArray(session.conversationHistory)) {
-        session.conversationHistory.push({ role: 'assistant', content: textResult });
-      }
-
-      // Update session state based on conversation progress
-      session.lastInteraction = Date.now();
-
-      // Simple conversation state management
-      const lastUserMessage = normalizedMessages[normalizedMessages.length - 1]?.content || '';
-      const aiResponse = textResult || '';
-
-      // Check if customer info was provided
-      if (!session.customerInfoConfirmed && lastUserMessage.includes('@') && lastUserMessage.includes(' ')) {
-        session.customerInfoConfirmed = true;
-        session.conversationStep = 'customer_confirmed';
-        console.log('✅ Customer info confirmed for session:', sessionId);
-      }
-
-      // Check if menu option was selected
-      if (session.customerInfoConfirmed && aiResponse.includes('修理サービスメニュー')) {
-        session.conversationStep = 'menu_shown';
-      }
-
-      // Check for menu selection
-      if (session.conversationStep === 'menu_shown' && /^\d+$/.test(lastUserMessage.trim())) {
-        const option = parseInt(lastUserMessage.trim());
-        if (option === 1) {
-          session.conversationStep = 'repair_history';
-          session.currentAgent = 'repair-history-ticket';
-        } else if (option === 2) {
-          session.conversationStep = 'repair_products';
-          session.currentAgent = 'repair-agent';
-        } else if (option === 3) {
-          session.conversationStep = 'repair_scheduling';
-          session.currentAgent = 'repair-scheduling';
-        }
-        console.log(`🎯 Menu option ${option} selected, switching to agent: ${session.currentAgent}`);
-      }
-
-    } catch (streamError: any) {
-      console.error('Stream processing error:', streamError);
-
-      // Send error as SSE
-      if (!res.headersSent) {
-        res.write(`data: ${JSON.stringify({ error: 'Stream processing failed', message: streamError?.message || 'Unknown error' })}\n\n`);
+        console.log(`✅ Test endpoint response complete, length: ${totalLength} characters`);
         res.end();
-      }
-    }
 
-  } catch (error: any) {
-    console.error(`❌ [ENDPOINT] /api/test/stream error:`, error);
-
-    // Ensure we always send a response
-    if (!res.headersSent) {
-      res.status(500).json({
-        error: error?.message || 'Unknown error',
-        timestamp: new Date().toISOString()
-      });
-    }
+  } catch (error) {
+    console.error(`❌ [Endpoint] /api/test/stream error:`, error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
   }
 }
 
@@ -1437,9 +1234,13 @@ app.post("/api/plamo/generate", async (req: Request, res: Response) => {
   }
 });
 
+// Disable serving local static UI; UI is hosted externally
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).send('Sanden Mastra backend is running.');
+});
 
 // Start server
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : 8080; // Use env PORT or default to 8080
+const PORT = 8080; // Test port (no root required)
 
 const server = app.listen(PORT, '0.0.0.0', () => {
   const actualPort = (server.address() as any)?.port || PORT;

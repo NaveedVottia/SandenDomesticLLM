@@ -1,4 +1,4 @@
-import { sharedMemory } from "../agents/sanden/customer-identification";
+import { sharedMemory } from "../agents/sanden/customer-identification.js";
 
 /**
  * Standardized customer context utility for consistent customer ID handling across all tools

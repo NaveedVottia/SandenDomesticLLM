@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'sanden-repair-system',
-      script: 'src/mastra-server.js',
+      script: 'dist/mastra-server.js',
       interpreter: 'node',
       instances: 1,
       autorestart: true,
@@ -10,7 +10,7 @@ module.exports = {
       max_memory_restart: '1G',
       env: {
         NODE_ENV: 'production',
-        PORT: 80
+        PORT: '80'
       },
       error_file: './logs/err.log',
       out_file: './logs/out.log',
