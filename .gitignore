@@ -79,6 +79,9 @@ jspm_packages/
 dist/
 build/
 
+# Local references and embedded repos
+mastra-sdkv5-reference/
+
 # OS generated files
 .DS_Store
 .DS_Store?
