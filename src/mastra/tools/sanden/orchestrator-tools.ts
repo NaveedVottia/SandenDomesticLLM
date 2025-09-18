@@ -83,7 +83,7 @@ export const delegateTo = createTool({
           if (writer && !writer.locked) {
             try {
               writer.write(sanitizedChunk);
-            } catch (writeError) {
+            } catch (writeError: any) {
               console.log(`⚠️ Writer error (likely locked):`, writeError.message);
             }
           }

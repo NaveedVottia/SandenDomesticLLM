@@ -25,6 +25,8 @@ try {
     console.error("[Langfuse] No prompt content received from Langfuse for Domestic-repair-history-ticket");
     REPAIR_HISTORY_INSTRUCTIONS = "You are a helpful AI assistant. Please respond to user messages.";
   }
+
+  // No additional hardcoded instructions - everything is in Langfuse prompt
 } catch (error) {
   console.error("[Langfuse] Failed to load Domestic-repair-history-ticket prompt:", error);
   REPAIR_HISTORY_INSTRUCTIONS = "You are a helpful AI assistant. Please respond to user messages.";
@@ -40,6 +42,8 @@ try {
     model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0"),
     tools: {
       ...repairTools,
+      // Ensure we have access to customer tools for context
+      ...customerTools,
     },
   });
   console.log("✅ SDKv5 Issue Analysis Agent created");

@@ -112,8 +112,9 @@ export const hybridGetProductsByCustomerIdTool = createTool({
       console.log(`🔍 [DEBUG] Getting products for customer ID: ${customerId}`);
       
       const result = await zapierMcp.callTool("google_sheets_lookup_spreadsheet_rows_advanced", {
-        instructions: `Get all products for customer ID: ${customerId}`,
+        instructions: `CRITICAL: You MUST search in the PRODUCTS worksheet only. Do NOT use the Customers worksheet. Get all products for customer ID: ${customerId}. The Products worksheet has these exact columns in order: 製品ID, 顧客ID, 製品カテゴリ, 型式, シリアル番号, 保証状況. Find all rows where the 顧客ID column (second column, COL$B) matches ${customerId}. Return product information only.`,
         worksheet: "Products",
+        lookup_column: "顧客ID",
         lookup_key: "顧客ID",
         lookup_value: customerId,
         row_count: "50"
@@ -130,7 +131,17 @@ export const hybridGetProductsByCustomerIdTool = createTool({
           console.log(`🔍 [DEBUG] Found content[0].text, parsing JSON...`);
           const parsedContent = JSON.parse(result.content[0].text);
           console.log(`🔍 [DEBUG] Parsed content:`, JSON.stringify(parsedContent, null, 2));
-          
+
+          // Check if Zapier returned an error
+          if (parsedContent && parsedContent.isError) {
+            console.log(`❌ [DEBUG] Zapier returned error: ${parsedContent.error}`);
+            return {
+              success: false,
+              data: null,
+              message: `製品情報の取得に失敗しました: ${parsedContent.error}`,
+            };
+          }
+
           if (parsedContent && parsedContent.results && Array.isArray(parsedContent.results) && parsedContent.results[0] && parsedContent.results[0].rows) {
             rows = parsedContent.results[0].rows;
             console.log(`🔍 [DEBUG] Extracted rows from parsed content:`, JSON.stringify(rows, null, 2));
@@ -178,9 +189,9 @@ export const hybridGetProductsByCustomerIdTool = createTool({
       } else {
         console.log(`❌ [DEBUG] No product records found for customer ID: ${customerId}`);
         return {
-          success: true,
+          success: false,
           data: [],
-          message: `顧客ID ${customerId} の製品情報は見つかりませんでした。`,
+          message: `顧客ID ${customerId} の製品情報が見つかりませんでした。Google SheetsのProductsワークシートを確認してください。`,
         };
       }
     } catch (error: any) {
