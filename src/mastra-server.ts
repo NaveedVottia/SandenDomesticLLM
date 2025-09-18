@@ -1064,7 +1064,6 @@ async function handleTestStream(req: Request, res: Response) {
     const session = getSession(sessionId);
     console.log(`🔍 Session:`, JSON.stringify(session, null, 2));
 
-    console.log(`🤖 [SDKv5] /api/test/stream request, messages: ${messages.length}`);
     console.log(`🤖 [DEBUG] Raw messages:`, JSON.stringify(messages, null, 2));
     console.log(`🤖 [DEBUG] Message types:`, messages.map((m, i) => ({ index: i, type: typeof m, keys: Object.keys(m || {}) })));
 

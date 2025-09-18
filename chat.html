@@ -355,6 +355,13 @@
         // Set initial timestamp
         document.getElementById('initial-time').textContent = new Date().toLocaleTimeString();
 
+        // Create persistent session ID for the conversation
+        let sessionId = localStorage.getItem('sanden-session-id');
+        if (!sessionId) {
+            sessionId = 'chat-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('sanden-session-id', sessionId);
+        }
+
         function addMessage(content, type = 'user') {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}`;
@@ -430,7 +437,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Session-ID': 'chat-' + Date.now()
+                        'X-Session-ID': sessionId
                     },
                     body: JSON.stringify({
                         messages: [{ role: 'user', content: message }]
