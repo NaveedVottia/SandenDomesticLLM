@@ -80,7 +80,13 @@ export const delegateTo = createTool({
             fullResponse += chunk; // Keep original for data extraction
           }
           
-          if (writer) writer.write(sanitizedChunk);
+          if (writer && !writer.locked) {
+            try {
+              writer.write(sanitizedChunk);
+            } catch (writeError) {
+              console.log(`⚠️ Writer error (likely locked):`, writeError.message);
+            }
+          }
         }
       }
       let extractedData = null;

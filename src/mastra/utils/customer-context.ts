@@ -47,13 +47,17 @@ export function extractCustomerId(context: any): string | null {
 export function extractSessionId(context: any): string | null {
   if (context.sessionId) return context.sessionId;
   if (context.session?.sessionId) return context.session.sessionId;
-  
-  try {
-    return sharedMemory.get("sessionId");
-  } catch (error) {
-    console.log(`❌ [CustomerContext] Error getting sessionId from memory:`, error);
-    return null;
-  }
+
+  // Temporarily disable memory access until properly implemented
+  // try {
+  //   return sharedMemory.get("sessionId");
+  // } catch (error) {
+  //   console.log(`❌ [CustomerContext] Error getting sessionId from memory:`, error);
+  //   return null;
+  // }
+
+  console.log(`🔍 [CustomerContext] SessionId not found in context, returning null`);
+  return null;
 }
 
 /**

@@ -1158,13 +1158,28 @@ async function handleTestStream(req: Request, res: Response) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+    // Update agent memory with session context before streaming
+    if (session.customerId && resolvedAgent.memory) {
+      try {
+        resolvedAgent.memory.set("customerId", session.customerId);
+        resolvedAgent.memory.set("sessionId", sessionId);
+        resolvedAgent.memory.set("session", session);
+        console.log(`🔍 Updated memory for agent ${agentId}: customerId=${session.customerId}`);
+      } catch (error) {
+        console.log(`❌ Error updating agent memory:`, error);
+      }
+    }
+
     try {
       console.log('🔍 Starting stream processing with full context...');
       console.log('🔍 Full messages context:', JSON.stringify(fullMessages, null, 2));
 
-      // Temporarily remove memory configuration to test basic functionality
       const stream = await resolvedAgent.streamVNext(fullMessages, {
-        format: 'aisdk'
+        format: 'aisdk',
+        memory: {
+          thread: sessionId,
+          resource: agentId,
+        },
       });
       console.log('🔍 Stream object type:', typeof stream);
 
@@ -1214,20 +1229,60 @@ async function handleTestStream(req: Request, res: Response) {
         session.conversationStep = 'menu_shown';
       }
 
-      // Check for menu selection
-      if (session.conversationStep === 'menu_shown' && /^\d+$/.test(lastUserMessage.trim())) {
-        const option = parseInt(lastUserMessage.trim());
-        if (option === 1) {
+      // Check for menu selection (both numbers and natural language)
+      if (session.conversationStep === 'menu_shown') {
+        const userInput = lastUserMessage.toLowerCase().trim();
+
+        // Check for number selection
+        if (/^\d+$/.test(userInput)) {
+          const option = parseInt(userInput);
+          if (option === 1) {
+            session.conversationStep = 'repair_history';
+            session.currentAgent = 'repair-history-ticket';
+          } else if (option === 2) {
+            session.conversationStep = 'repair_products';
+            session.currentAgent = 'repair-agent';
+          } else if (option === 3) {
+            session.conversationStep = 'repair_scheduling';
+            session.currentAgent = 'repair-scheduling';
+          }
+          console.log(`🎯 Menu option ${option} selected, switching to agent: ${session.currentAgent}`);
+        }
+        // Check for natural language commands
+        else if (userInput.includes('repair history') || userInput.includes('修理履歴') || userInput.includes('history')) {
           session.conversationStep = 'repair_history';
           session.currentAgent = 'repair-history-ticket';
-        } else if (option === 2) {
+          console.log(`🎯 Natural language: "repair history" detected, switching to agent: ${session.currentAgent}`);
+        }
+        else if (userInput.includes('product') || userInput.includes('製品') || userInput.includes('registered products')) {
           session.conversationStep = 'repair_products';
           session.currentAgent = 'repair-agent';
-        } else if (option === 3) {
+          console.log(`🎯 Natural language: "products" detected, switching to agent: ${session.currentAgent}`);
+        }
+        else if (userInput.includes('schedule') || userInput.includes('予約') || userInput.includes('booking') || userInput.includes('appointment')) {
           session.conversationStep = 'repair_scheduling';
           session.currentAgent = 'repair-scheduling';
+          console.log(`🎯 Natural language: "scheduling" detected, switching to agent: ${session.currentAgent}`);
         }
-        console.log(`🎯 Menu option ${option} selected, switching to agent: ${session.currentAgent}`);
+      }
+
+      // Update memory for the target agent if it changed
+      if (session.currentAgent && session.currentAgent !== 'customer-identification' && session.customerId) {
+        try {
+          const mastra = await mastraPromise;
+          const targetAgent = mastra.getAgentById(session.currentAgent);
+          if (targetAgent) {
+            const resolvedTargetAgent = await targetAgent;
+            if (resolvedTargetAgent.memory) {
+              resolvedTargetAgent.memory.set("customerId", session.customerId);
+              resolvedTargetAgent.memory.set("sessionId", sessionId);
+              resolvedTargetAgent.memory.set("session", session);
+              console.log(`🔍 Updated memory for switched agent ${session.currentAgent}: customerId=${session.customerId}`);
+            }
+          }
+        } catch (error) {
+          console.log(`❌ Error updating memory for switched agent:`, error);
+        }
       }
 
     } catch (streamError: any) {
