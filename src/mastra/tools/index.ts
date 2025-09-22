@@ -1,7 +1,6 @@
-// Export all tool collections for easy access
-// export { customerTools } from "./sanden/customer-tools"; // REMOVED - prevents orchestrator from calling customer tools directly
+// Export all working tool collections for easy access
 export { validateSession, getSystemInfo, getHelp, searchFAQDatabase } from "./sanden/common-tools";
-export { searchProductsTool, createProductTool, updateProductTool, getProductsByCustomerIdTool } from "./sanden/product-tools";
+export { hybridGetProductsByCustomerIdTool } from "./sanden/product-tools"; // Only working product tool after cleanup
 export { createRepairTool, updateRepairTool, getRepairStatusTool, hybridGetRepairsByCustomerIdTool } from "./sanden/repair-tools";
-export { schedulingTools } from "./sanden/scheduling-tools";
+export { schedulingTools } from "./sanden/scheduling-tools"; // Contains googleSheetsCreateRow and googleCalendarEvent
 export { delegateTo, logCustomerData } from "./sanden/orchestrator-tools";

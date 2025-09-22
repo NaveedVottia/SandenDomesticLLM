@@ -32,7 +32,13 @@ export const repairQaAgentIssueAnalysis = new Agent({
   name: "repair-history-ticket",
   description: "サンデン・リテールシステム修理受付AI , 問題分析エージェント",
   instructions: REPAIR_HISTORY_INSTRUCTIONS,
-  model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0"),
+  model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0", {
+    temperature: 0.1,
+    maxTokens: 1000,
+    region: process.env.AWS_REGION || "ap-northeast-1",
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  }),
   tools: {
     ...repairTools,
     ...customerTools,

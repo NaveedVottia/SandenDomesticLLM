@@ -26,7 +26,7 @@ export const createRepairTool = createTool({
 
     try {
       // Append a log row to Logs indicating creation intent
-      await zapierMcp.callTool("google_sheets_create_spreadsheet_row", {
+      await zapierMcp.callTool("google_sheets_create_spreadsheet_row_at_top", {
         instructions: "repair create log",
         Timestamp: new Date().toISOString(),
         "Repair ID": "",
@@ -116,7 +116,7 @@ export const getRepairStatusTool = createTool({
     try {
       const rows = await zapierMcp.callTool("google_sheets_get_many_spreadsheet_rows_advanced", {
         instructions: "get repair status",
-        worksheet: "Repairs",
+        worksheet: "Logs",
         row_count: 50,
       });
       const list = (rows?.results as any[]) || [];
@@ -213,7 +213,7 @@ export const hybridGetRepairsByCustomerIdTool = createTool({
       
       const result = await zapierMcp.callTool("google_sheets_lookup_spreadsheet_rows_advanced", {
         instructions: `Get repair history for customer ID: ${customerId}`,
-        worksheet: "Repairs",
+        worksheet: "Logs",
         lookup_key: "顧客ID",
         lookup_value: customerId,
         row_count: "50"

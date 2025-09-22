@@ -1,0 +1,26 @@
+[
+  {
+    "id": "CUST001",
+    "name": "株式会社セブンイレブン",
+    "store": "渋谷店",
+    "email": "suzuki@seven-eleven.co.jp",
+    "phone": "03-1234-5678",
+    "location": "東京都渋谷区"
+  },
+  {
+    "id": "CUST002",
+    "name": "ローソン",
+    "store": "秋葉原店",
+    "email": "tanaka@lawson.co.jp",
+    "phone": "06-9876-5432",
+    "location": "東京都千代田区"
+  },
+  {
+    "id": "CUST999",
+    "name": "テスト顧客",
+    "store": "テスト店",
+    "email": "test@example.com",
+    "phone": "00-0000-0000",
+    "location": "テスト県"
+  }
+]

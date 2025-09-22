@@ -6,8 +6,40 @@ import { sharedMastraMemory, createMemoryIds, getCustomerData } from "../../shar
 // Import the robust row extraction function from customer-tools
 function extractRowsFromZapier(result: any): any[] {
   if (!result) return [];
+
+  console.log(`🔍 [DEBUG] Extracting rows from Zapier result:`, JSON.stringify(result, null, 2));
+
+  // Handle Zapier MCP format: { content: [{ type: "text", text: "json_string" }] }
+  if (result?.content && Array.isArray(result.content)) {
+    for (const item of result.content) {
+      if (item?.type === "text" && typeof item.text === "string") {
+        try {
+          const parsedContent = JSON.parse(item.text);
+          console.log(`🔍 [DEBUG] Parsed content from text:`, JSON.stringify(parsedContent, null, 2));
+
+          // Extract rows from parsed content
+          if (parsedContent?.results && Array.isArray(parsedContent.results)) {
+            const out: any[] = [];
+            for (const entry of parsedContent.results) {
+              if (Array.isArray(entry?.rows)) {
+                out.push(...entry.rows);
+              }
+            }
+            if (out.length) {
+              console.log(`🔍 [DEBUG] Extracted ${out.length} rows from content:`, JSON.stringify(out, null, 2));
+              return out;
+            }
+          }
+        } catch (error) {
+          console.log(`❌ [DEBUG] Failed to parse content text:`, error);
+        }
+      }
+    }
+  }
+
   // Direct rows array
   if (Array.isArray(result?.rows)) return result.rows;
+
   // Results array or object with nested rows
   if (result?.results) {
     const out: any[] = [];
@@ -27,6 +59,7 @@ function extractRowsFromZapier(result: any): any[] {
     }
     if (out.length) return out;
   }
+
   // Numeric keyed object: { "0": { rows: [...] }, ... }
   if (typeof result === "object") {
     const out: any[] = [];
@@ -39,41 +72,12 @@ function extractRowsFromZapier(result: any): any[] {
     }
     if (out.length) return out;
   }
+
+  console.log(`❌ [DEBUG] No rows extracted from result`);
   return [];
 }
 
-export const searchProductsTool = createTool({
-  id: "searchProducts",
-  description: "Search for products in the Sanden repair system",
-  inputSchema: z.object({
-    query: z.string().describe("Search query"),
-    category: z.string().optional().describe("Filter by product category"),
-    sessionId: z.string().describe("Session ID for validation"),
-  }),
-  outputSchema: z.object({
-    success: z.boolean(),
-    data: z.record(z.string(), z.unknown()),
-    message: z.string(),
-  }),
-  execute: async ({ context }: { context: any }) => {
-    const { query, category, sessionId } = context;
-
-    try {
-      const result = await searchProducts(sessionId, query, category);
-      return {
-        success: true,
-        data: result.data || result,
-        message: result.message || "製品検索が完了しました。",
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        data: null,
-        message: `Product search failed: ${error.message}`,
-      };
-    }
-  },
-});
+// REMOVED: searchProductsTool - not needed for current workflow
 
 export const getProductsByCustomerIdTool = createTool({
   id: "getProductsByCustomerId",
@@ -91,17 +95,67 @@ export const getProductsByCustomerIdTool = createTool({
     const { customerId, sessionId } = context;
 
     try {
-      const result = await zapierMcp.callTool("google_sheets_lookup_spreadsheet_rows_advanced", {
-        instructions: `Get all products for customer ID: ${customerId}`,
-        worksheet: "Products",
-        lookup_key: "顧客ID",
-        lookup_value: customerId,
-        row_count: "50"
-      });
+      // Try the range method first to get all products, then filter by customer ID
+      let result;
+      try {
+        // First try to get all products from the Products worksheet using range
+        result = await zapierMcp.callTool("google_sheets_get_data_range", {
+          instructions: `Get all data from the Products worksheet for customer ${customerId}`,
+          a1_range: "A:F"
+        });
+      } catch (rangeError: any) {
+        console.log(`[DEBUG] Range method failed, trying lookup:`, rangeError.message);
+        // Fallback to lookup method with explicit parameters
+        result = await zapierMcp.callTool("google_sheets_lookup_spreadsheet_rows_advanced", {
+          instructions: `CRITICAL: Search ONLY in the Products worksheet for customer ID: ${customerId}. Do NOT use Customers worksheet.`,
+          worksheet: "228243100",  // Use worksheet ID that was working
+          lookup_key: "COL$B",  // Use column reference
+          lookup_value: customerId,
+          row_count: "50"
+        });
+      }
       
       // Extract rows from the correct format
-      const rows = (result?.results?.[0]?.rows || result?.results || result || []);
-      
+      let rows = [];
+
+      if (result?.content?.[0]?.text) {
+        // Parse JSON response from Zapier
+        try {
+          const parsed = JSON.parse(result.content[0].text);
+          console.log(`[DEBUG] Parsed Zapier response:`, JSON.stringify(parsed, null, 2));
+
+          if (parsed.values && Array.isArray(parsed.values)) {
+            // Range method returns values array
+            rows = parsed.values.slice(1).map((row: any[]) => ({
+              "COL$A": row[0], // 製品ID
+              "COL$B": row[1], // 顧客ID
+              "COL$C": row[2], // 製品カテゴリ
+              "COL$D": row[3], // 型式
+              "COL$E": row[4], // シリアル番号
+              "COL$F": row[5], // 保証状況
+            })).filter((row: any) => row["COL$B"] === customerId); // Filter by customer ID
+            console.log(`[DEBUG] Extracted rows from range method:`, JSON.stringify(rows, null, 2));
+          } else if (parsed.results?.[0]?.rows) {
+            // Lookup method returns results array
+            rows = parsed.results[0].rows;
+            console.log(`[DEBUG] Extracted rows from lookup method:`, JSON.stringify(rows, null, 2));
+          } else {
+            console.log(`[DEBUG] No expected format found in parsed response`);
+          }
+        } catch (parseError: any) {
+          console.log(`[DEBUG] Failed to parse Zapier response:`, parseError.message);
+        }
+      } else {
+        console.log(`[DEBUG] No content[0].text found in result`);
+      }
+
+      // Fallback to original logic
+      if (rows.length === 0) {
+        console.log(`[DEBUG] Using fallback extraction logic`);
+        rows = (result?.results?.[0]?.rows || result?.results || result || []);
+        console.log(`[DEBUG] Fallback extracted rows:`, JSON.stringify(rows, null, 2));
+      }
+
       return {
         success: true,
         data: rows,
@@ -199,8 +253,8 @@ export const hybridGetProductsByCustomerIdTool = createTool({
 
       const result = await zapierMcp.callTool("google_sheets_lookup_spreadsheet_rows_advanced", {
         instructions: `Get all products for customer ID: ${customerId}`,
-        worksheet: "Products",
-        lookup_key: "COL$B",  // Exact column for 顧客ID in Products worksheet
+        worksheet: "Products",  // Use worksheet name instead of ID
+        lookup_key: "顧客ID",  // Use column name instead of reference
         lookup_value: customerId,
         row_count: "50"
       });
@@ -217,12 +271,12 @@ export const hybridGetProductsByCustomerIdTool = createTool({
 
         // Format the product data (same structure as repair history)
         const products = rows.map((row: any) => ({
-          productId: row["COL$A"] || row["製品ID"],
-          customerId: row["COL$B"] || row["顧客ID"],
-          productCategory: row["COL$C"] || row["製品カテゴリ"],
-          model: row["COL$D"] || row["型式"],
-          serialNumber: row["COL$E"] || row["シリアル番号"],
-          warrantyStatus: row["COL$F"] || row["保証状況"]
+          productId: row["製品ID"] || row["COL$A"],
+          customerId: row["顧客ID"] || row["COL$B"],
+          productCategory: row["製品カテゴリ"] || row["COL$C"],
+          model: row["型式"] || row["COL$D"],
+          serialNumber: row["シリアル番号"] || row["COL$E"],
+          warrantyStatus: row["保証状況"] || row["COL$F"]
         }));
 
         console.log(`✅ [DEBUG] Formatted products:`, JSON.stringify(products, null, 2));
@@ -452,8 +506,8 @@ async function searchProducts(
   try {
     const results = await zapierMcp.callTool("google_sheets_lookup_spreadsheet_rows_advanced", {
       instructions: "製品検索 (partial match app-side)",
-      worksheet: "Products",
-      lookup_key: "製品カテゴリ",
+      worksheet: "228243100",  // Use worksheet ID that was working
+      lookup_key: "COL$C",  // Use column reference
       lookup_value: category || "",
     });
     const rows = (results?.results as any[]) || [];
@@ -478,14 +532,7 @@ async function zapierCall(event: string, payload: Record<string, any>) {
   return { success: true, data: result?.results || result, message: "Zapier MCP call completed successfully" };
 }
 
-// Export all product tools
+// Export only the working product tool
 export const productTools = {
-  searchProductsTool,
-  getProductsByCustomerIdTool,
-  hybridGetProductsByCustomerIdTool, // Add the new hybrid tool
-  createProductTool,
-  updateProductTool,
-  checkWarrantyStatusTool,
-  getStandardRepairFeesTool,
-  searchRepairLogsTool,
+  hybridGetProductsByCustomerIdTool, // The only working tool that returns real Google Sheets data
 };

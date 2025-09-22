@@ -1,0 +1,37 @@
+{
+  "timestamp": "2025-09-22T05:22:47.071Z",
+  "environment": {
+    "nodeVersion": "v20.19.4",
+    "platform": "linux",
+    "arch": "x64",
+    "cwd": "/home/ec2-user/sanden-repair-system-V2"
+  },
+  "checks": {
+    "serverEnv": true,
+    "packageJson": true,
+    "distFolder": true,
+    "testReports": true,
+    "testData": true,
+    "database": true,
+    "langfuseConfigured": true,
+    "zapierConfigured": true
+  },
+  "agents": [
+    "customer-identification",
+    "repair-scheduling",
+    "issue-analysis",
+    "product-selection",
+    "visit-confirmation"
+  ],
+  "tools": [
+    "lookupCustomerFromDatabase",
+    "directRepairHistory",
+    "hybridGetRepairsByCustomerIdTool",
+    "hybridGetProductsByCustomerIdTool",
+    "delegateTo",
+    "searchFAQDatabase",
+    "fuzzySearchCustomers",
+    "getCustomerDetails",
+    "logCustomerData"
+  ]
+}

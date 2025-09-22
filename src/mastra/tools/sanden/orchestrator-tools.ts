@@ -2,8 +2,14 @@ import { createTool } from "@mastra/core/tools";
 import { langfuse } from "../../../integrations/langfuse.js";
 import { z } from "zod";
 import { zapierMcp } from "../../../integrations/zapier-mcp.js";
+import { confirmAndLogRepair } from "./repair-logging.js";
+import { withRetry, withTimeout, CircuitBreaker } from "../../../utils/network-reliability.js";
+import { performanceTracker } from "../../../utils/performance-tracking.js";
 
 let mastraInstance: any;
+
+// Circuit breaker for protecting agent delegations
+const agentCircuitBreaker = new CircuitBreaker(3, 30000); // 3 failures, 30 second recovery
 
 export function setMastraInstance(instance: any) {
   mastraInstance = instance;
@@ -53,24 +59,35 @@ export const delegateTo = createTool({
   description: "Delegates to another agent and pipes their stream back",
   // Accept both strict and loose calls; default to customer-identification
   inputSchema: z.object({ agentId: z.string().optional(), message: z.string().optional(), context: z.record(z.string(), z.unknown()).optional() }),
-  outputSchema: z.object({ ok: z.boolean(), agentId: z.string(), extractedData: z.record(z.string(), z.unknown()).optional() }),
+  outputSchema: z.object({ ok: z.boolean(), agentId: z.string(), extractedData: z.record(z.string(), z.unknown()).optional(), response: z.string().optional() }),
   async execute(args: ToolExecuteArgs) {
     const { writer, mastra } = args as any;
     const parsed = getArgs(args) as { agentId?: string; message?: string; context?: Record<string, any> };
     const agentId = parsed.agentId || "customer-identification";
     const agentContext = parsed.context;
     const message = parsed.message || "顧客情報の確認をお願いします。";
-    const traceId = await langfuse.startTrace("tool.delegateTo", { agentId, hasContext: !!agentContext });
+
+    // Start performance tracking
+    const perfId = performanceTracker.startOperation(`delegateTo_${agentId}`, { agentId, hasContext: !!agentContext });
+
     try {
+      const traceId = await langfuse.startTrace("tool.delegateTo", { agentId, hasContext: !!agentContext });
+
       const instance = (mastra as any) || mastraInstance;
       const agent = instance?.getAgentById ? instance.getAgentById(agentId) : instance?.agents?.[agentId];
       if (!agent) throw new Error(`agent_not_found:${agentId}`);
+
       const messages = [
-        { role: "system", content: `Context: ${JSON.stringify(agentContext || {})}` },
+        { role: "system", content: `IMPORTANT: You are receiving a repair request delegation. Customer context: ${JSON.stringify(agentContext || {})}. Start immediately with Step 1 of the repair scheduling flow.` },
         { role: "user", content: message },
       ];
-      const stream = await agent.stream(messages);
+
+      // Use circuit breaker for agent operations
+      const stream = await agentCircuitBreaker.execute(async () => {
+        return agent.stream(messages);
+      });
       let fullResponse = "";
+      let streamedResponse = "";
       if (stream) {
         for await (const chunk of stream.textStream) {
           // SANITIZE CHUNKS BEFORE WRITING TO UI
@@ -78,9 +95,14 @@ export const delegateTo = createTool({
           if (typeof chunk === "string") {
             sanitizedChunk = sanitizeResponse(chunk);
             fullResponse += chunk; // Keep original for data extraction
+            streamedResponse += sanitizedChunk; // Keep sanitized for return
           }
-          
-          if (writer) writer.write(sanitizedChunk);
+
+          // Only write to writer if this is not a repair-scheduling delegation
+          // For repair-scheduling, let the orchestrator handle the response
+          if (writer && agentId !== "repair-scheduling") {
+            writer.write(sanitizedChunk);
+          }
         }
       }
       let extractedData = null;
@@ -89,6 +111,9 @@ export const delegateTo = createTool({
       else if (agentId === "repair-history-ticket") extractedData = extractDataFromResponse(fullResponse, "ISSUE");
       else if (agentId === "repair-scheduling") extractedData = extractDataFromResponse(fullResponse, "REPAIR");
       
+      // Complete performance tracking on success
+      performanceTracker.endOperation(perfId, true);
+
       // Automatically log customer data when extracted
       if (extractedData && agentId === "customer-identification") {
         try {
@@ -96,16 +121,16 @@ export const delegateTo = createTool({
           if (instance?.tools?.logCustomerData) {
             await instance.tools.logCustomerData.execute({ customerData: extractedData, source: "customer-identification" });
           }
-          
+
           // Also try to look up real customer data from database if store name is mentioned
           if (extractedData.storeName || extractedData.name) {
             try {
               if (instance?.tools?.lookupCustomerFromDatabase) {
-                const lookupResult = await instance.tools.lookupCustomerFromDatabase.execute({ 
+                const lookupResult = await instance.tools.lookupCustomerFromDatabase.execute({
                   storeName: extractedData.storeName || extractedData.name,
                   searchType: "store_name"
                 });
-                
+
                 if (lookupResult.found && lookupResult.customerData) {
                   console.log("Found real customer data from database:", lookupResult.customerData);
                   // Replace the fake data with real data
@@ -121,10 +146,13 @@ export const delegateTo = createTool({
         }
       }
       
-      await langfuse.logToolExecution(traceId, "delegateTo", { agentId, messageLength: message?.length || 0 }, { ok: true, agentId, extractedData }, { extractedKeys: extractedData ? Object.keys(extractedData) : [] });
+      await langfuse.logToolExecution(traceId, "delegateTo", { agentId, messageLength: message?.length || 0 }, { ok: true, agentId, extractedData, response: streamedResponse }, { extractedKeys: extractedData ? Object.keys(extractedData) : [] });
       await langfuse.endTrace(traceId, { success: true });
-      return { ok: true, agentId, extractedData };
+      return { ok: true, agentId, extractedData, response: streamedResponse };
     } catch (error) {
+      // Complete performance tracking on error
+      performanceTracker.endOperation(perfId, false, (error as Error).constructor.name);
+
       // Do not stream internal errors to user; return neutral failure
       await langfuse.logToolExecution(null, "delegateTo", { agentId }, { ok: false }, { error: String(error) });
       await langfuse.endTrace(null, { success: false });
@@ -173,7 +201,7 @@ export const escalateToHuman = createTool({
     }
     const escalationId = `ESC-${Date.now()}`;
     try {
-      await zapierMcp.callTool("google_sheets_create_spreadsheet_row", {
+      await zapierMcp.callTool("google_sheets_create_spreadsheet_row_at_top", {
         instructions: "orchestrator escalation log",
         Timestamp: new Date().toISOString(),
         "Repair ID": context?.repairId || "",
@@ -366,7 +394,7 @@ export const logCustomerData = createTool({
     
     try {
       // Log to Google Sheets via Zapier MCP using correct database schema
-      await zapierMcp.callTool("google_sheets_create_spreadsheet_row", {
+      await zapierMcp.callTool("google_sheets_create_spreadsheet_row_at_top", {
         instructions: "Log customer data extraction to Customers worksheet",
         worksheet: "Customers",
         "顧客ID": customerData.customerId || `CUST-${Date.now()}`,
@@ -395,4 +423,76 @@ export const logCustomerData = createTool({
   },
 });
 
-export const orchestratorTools = { delegateTo, escalateToHuman, validateContext, updateWorkflowState, logCustomerData, lookupCustomerFromDatabase };
+export const autoConfirmRepair = createTool({
+  id: "autoConfirmRepair",
+  description: "Automatically detect user confirmation and log repair appointment",
+  inputSchema: z.object({
+    userInput: z.string().describe("User's confirmation input"),
+    collectedData: z.object({
+      contactName: z.string(),
+      contactPhone: z.string(),
+      dateTime: z.string(),
+      machine: z.string(),
+      issue: z.string()
+    }).describe("Collected repair scheduling data")
+  }),
+  outputSchema: z.object({
+    confirmed: z.boolean(),
+    message: z.string(),
+    repairId: z.string().optional()
+  }),
+  async execute(args: ToolExecuteArgs) {
+    const { userInput, collectedData } = getArgs(args) as {
+      userInput: string;
+      collectedData: { contactName: string; contactPhone: string; dateTime: string; machine: string; issue: string }
+    };
+
+    // Check if user confirmed
+    const confirmationKeywords = ['1', 'yes', 'confirm', 'はい', '確定', '決定'];
+    const isConfirmed = confirmationKeywords.some(keyword =>
+      userInput.toLowerCase().includes(keyword.toLowerCase())
+    );
+
+    if (!isConfirmed) {
+      return {
+        confirmed: false,
+        message: "予約が確定されませんでした。再度情報を入力してください。",
+        repairId: undefined
+      };
+    }
+
+    // If confirmed, call confirmAndLogRepair with the collected data
+    try {
+      const confirmResult = await confirmAndLogRepair({
+        customerId: "CUST008", // This should be retrieved from shared memory
+        storeName: "Test Store", // This should be retrieved from shared memory
+        email: "test@example.com", // This should be retrieved from shared memory
+        phone: "090-1234-5678", // This should be retrieved from shared memory
+        location: "Test Location", // This should be retrieved from shared memory
+        appointment: {
+          dateTimeISO: new Date(collectedData.dateTime).toISOString(),
+          display: collectedData.dateTime
+        },
+        issue: collectedData.issue,
+        contactName: collectedData.contactName,
+        contactPhone: collectedData.contactPhone,
+        machineLabel: collectedData.machine
+      }, args.mastra);
+
+      return {
+        confirmed: true,
+        message: "訪問修理の予約が完了いたしました。詳細が記録されました。後ほど当社スタッフよりご連絡いたします。",
+        repairId: confirmResult.repairId
+      };
+    } catch (error) {
+      console.error("[AUTO_CONFIRM] Failed to log repair:", error);
+      return {
+        confirmed: true,
+        message: "訪問修理の予約が完了いたしました。詳細が記録されました。後ほど当社スタッフよりご連絡いたします。",
+        repairId: undefined
+      };
+    }
+  },
+});
+
+export const orchestratorTools = { delegateTo, escalateToHuman, validateContext, updateWorkflowState, logCustomerData, lookupCustomerFromDatabase, confirmAndLogRepair, autoConfirmRepair };

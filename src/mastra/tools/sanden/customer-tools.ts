@@ -329,7 +329,7 @@ export const getCustomerHistory = createTool({
     try {
       const result = await zapierMcp.callTool("google_sheets_lookup_spreadsheet_rows_advanced", {
         instructions: `Get all repairs for customer ID: ${customerId}`,
-        worksheet: "Repairs",
+        worksheet: "Logs",
         lookup_key: "COL$D",
         lookup_value: customerId,
         row_count: "50"
@@ -869,7 +869,7 @@ export const customerTools = {
 
         // Optional: write validation log entry via MCP Logs sheet
         try {
-          await zapierMcp.callTool("google_sheets_create_spreadsheet_row", {
+          await zapierMcp.callTool("google_sheets_create_spreadsheet_row_at_top", {
             instructions: "validation log",
             Timestamp: new Date().toISOString(),
             "Repair ID": "",
@@ -909,7 +909,7 @@ export const customerTools = {
       const { action, sessionId, customerId, details } = context;
       try {
         try {
-          await zapierMcp.callTool("google_sheets_create_spreadsheet_row", {
+          await zapierMcp.callTool("google_sheets_create_spreadsheet_row_at_top", {
             instructions: "access log",
             Timestamp: new Date().toISOString(),
             "Repair ID": details?.repairId || "",
@@ -965,7 +965,7 @@ export const customerTools = {
       } = context;
       try {
         try {
-          await zapierMcp.callTool("google_sheets_create_spreadsheet_row", {
+          await zapierMcp.callTool("google_sheets_create_spreadsheet_row_at_top", {
             instructions: "escalation log",
             Timestamp: new Date().toISOString(),
             "Repair ID": contextData?.repairId || "",

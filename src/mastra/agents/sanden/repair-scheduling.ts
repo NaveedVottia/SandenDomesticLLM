@@ -39,7 +39,13 @@ export const repairVisitConfirmationAgent = new Agent({
   name: "repair-scheduling",
   description: "サンデン・リテールシステム修理受付AI , 修理予約エージェント",
   instructions: REPAIR_SCHEDULING_INSTRUCTIONS,
-  model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0"),
+  model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0", {
+    temperature: 0.1,
+    maxTokens: 1000,
+    region: process.env.AWS_REGION || "ap-northeast-1",
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  }),
   tools: {
     ...schedulingTools,
     ...customerTools,
@@ -48,6 +54,8 @@ export const repairVisitConfirmationAgent = new Agent({
     ...memoryTools, // Add memory tools
     delegateTo: orchestratorTools.delegateTo, // Add delegateTo tool
     lookupCustomerFromDatabase: orchestratorTools.lookupCustomerFromDatabase, // Add lookup tool
+    confirmAndLogRepair: orchestratorTools.confirmAndLogRepair, // Add confirm and log tool
+    autoConfirmRepair: orchestratorTools.autoConfirmRepair, // Add auto confirm tool
   },
   memory: sharedMastraMemory, // Use shared memory
 });

@@ -10,7 +10,14 @@ import { loadLangfusePrompt } from "./mastra/prompts/langfuse.js";
 // Load environment variables FIRST with absolute path
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, "../server.env") });
+
+// Load environment variables from server.env
+const envPath = path.resolve(__dirname, "../server.env");
+console.log("🔍 Loading environment from:", envPath);
+dotenv.config({ path: envPath });
+
+// Verify CORS_ORIGIN is loaded
+console.log("🔍 CORS_ORIGIN:", process.env.CORS_ORIGIN ? "✅ Set" : "❌ Missing");
 
 console.log("🔍 Environment variables loaded:");
 console.log(`LANGFUSE_HOST: ${process.env.LANGFUSE_HOST ? '✅ Set' : '❌ Missing'}`);
@@ -127,7 +134,7 @@ app.get("/health", async (req: Request, res: Response) => {
       )
     ]);
 
-    const mastra = await mastraPromiseWithTimeout;
+    const mastra = await mastraPromiseWithTimeout as any;
     console.log("mastra type:", typeof mastra);
     console.log("mastra.agents:", mastra.agents);
     console.log("mastra.getAgentById:", typeof mastra.getAgentById);
@@ -307,10 +314,8 @@ app.post("/api/agents/customer-identification/stream/vnext/ui", async (req: Requ
     const messages = Array.isArray(req.body?.messages) ? req.body.messages : [];
     const sessionId = getSessionId(req);
     const session = getSession(sessionId);
-    const resourceId = sessionId;
-    const threadId = `thread-${sessionId}`;
 
-    console.log(`🔍 Processing SDK5 request with ${messages.length} messages (using SDK4 streamLegacy)`);
+    console.log(`🔍 Processing SDK5 request with ${messages.length} messages (using streamVNext)`);
 
     const agent = await getAgentById("customer-identification");
     if (!agent) {
@@ -318,16 +323,14 @@ app.post("/api/agents/customer-identification/stream/vnext/ui", async (req: Requ
     }
 
     const resolvedAgent = await agent;
-    console.log("🔍 Resolved agent type:", typeof resolvedAgent);
+    console.log("🔍 Resolved agent methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(resolvedAgent)));
 
-    // Keep using SDK4 streamLegacy but convert to SDK5 format
+    // Use streamLegacy for V1 models (like Claude Sonnet) and manually convert to SDK5 format
+    // streamVNext doesn't work with V1 models, so we use the legacy approach
     if (typeof resolvedAgent.streamLegacy === 'function') {
-      console.log("🔍 Using streamLegacy (SDK4) with SDK5 format conversion...");
+      console.log("🔍 Falling back to streamLegacy with manual SDK5 conversion...");
 
-      const stream = await resolvedAgent.streamLegacy(messages, {
-        resourceId: resourceId,
-        threadId: threadId
-      });
+      const stream = await resolvedAgent.streamLegacy(messages);
 
       console.log("✅ StreamLegacy succeeded, converting to SDK5 format");
 
@@ -364,7 +367,7 @@ app.post("/api/agents/customer-identification/stream/vnext/ui", async (req: Requ
       return;
 
     } else {
-      console.log("⚠️ Agent does not support streamLegacy");
+      console.log("⚠️ Agent does not support streamVNext or streamLegacy");
       return res.status(500).json({ error: "Agent does not support streaming" });
     }
 

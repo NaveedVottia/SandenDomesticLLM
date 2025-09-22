@@ -1,6 +1,6 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { sharedMastraMemory } from "../../shared-memory.js";
+import { sharedMastraMemory, getCustomerData } from "../../shared-memory.js";
 
 // Working memory template for customer profiles
 const WORKING_MEMORY_TEMPLATE = `# Customer Profile
@@ -13,32 +13,25 @@ const WORKING_MEMORY_TEMPLATE = `# Customer Profile
 - **Current Agent**: {{currentAgent}}
 - **Session Start**: {{sessionStart}}`;
 
-// Helper function to get formatted customer profile from memory (legacy approach)
-const getCustomerProfile = () => {
+// Helper function to get formatted customer profile from memory
+const getCustomerProfile = async (resourceId: string, threadId: string) => {
   try {
-    const customerId = sharedMastraMemory.get("customerId");
-    const storeName = sharedMastraMemory.get("storeName");
-    const email = sharedMastraMemory.get("email");
-    const phone = sharedMastraMemory.get("phone");
-    const location = sharedMastraMemory.get("location");
-    const lastInteraction = sharedMastraMemory.get("lastInteraction");
-    const currentAgent = sharedMastraMemory.get("currentAgent");
-    const sessionStart = sharedMastraMemory.get("sessionStart");
-    
-    if (customerId) {
+    const customerData = await getCustomerData({ resource: resourceId, thread: threadId });
+
+    if (customerData && customerData.customerId) {
       return WORKING_MEMORY_TEMPLATE
-        .replace("{{customerId}}", customerId || "N/A")
-        .replace("{{storeName}}", storeName || "N/A")
-        .replace("{{email}}", email || "N/A")
-        .replace("{{phone}}", phone || "N/A")
-        .replace("{{location}}", location || "N/A")
-        .replace("{{lastInteraction}}", lastInteraction || "N/A")
-        .replace("{{currentAgent}}", currentAgent || "N/A")
-        .replace("{{sessionStart}}", sessionStart || "N/A");
+        .replace("{{customerId}}", customerData.customerId || "N/A")
+        .replace("{{storeName}}", customerData.storeName || "N/A")
+        .replace("{{email}}", customerData.email || "N/A")
+        .replace("{{phone}}", customerData.phone || "N/A")
+        .replace("{{location}}", customerData.location || "N/A")
+        .replace("{{lastInteraction}}", customerData.lastInteraction || "N/A")
+        .replace("{{currentAgent}}", customerData.currentAgent || "N/A")
+        .replace("{{sessionStart}}", customerData.sessionStart || "N/A");
     }
     return null;
   } catch (error) {
-    console.log(`❌ [DEBUG] Error getting customer profile:`, error);
+    console.error("❌ [DEBUG] Error getting customer profile:", error);
     return null;
   }
 };
@@ -47,18 +40,25 @@ const getCustomerProfile = () => {
 export const getCustomerProfileTool = createTool({
   id: "getCustomerProfile",
   description: "Get the current customer profile from shared memory",
-  inputSchema: z.object({}),
+  inputSchema: z.object({
+    sessionId: z.string().describe("Session ID for memory access"),
+  }),
   outputSchema: z.object({
     success: z.boolean(),
     profile: z.string().optional(),
     customerId: z.string().optional(),
     hasProfile: z.boolean(),
   }),
-  execute: async () => {
+  execute: async ({ context }: { context: { sessionId: string } }) => {
     try {
-      const profile = getCustomerProfile();
-      const customerId = sharedMastraMemory.get("customerId");
-      
+      const { sessionId } = context;
+      const resourceId = sessionId; // Use sessionId as resourceId
+      const threadId = `thread-${sessionId}`;
+
+      const profile = await getCustomerProfile(resourceId, threadId);
+      const customerData = await getCustomerData({ resource: resourceId, thread: threadId });
+      const customerId = customerData?.customerId;
+
       if (profile && customerId) {
         console.log(`🔍 [DEBUG] Retrieved customer profile for ${customerId}`);
         return {

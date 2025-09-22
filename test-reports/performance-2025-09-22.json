@@ -1,0 +1,35 @@
+{
+  "timestamp": "2025-09-22T05:22:50.090Z",
+  "reportFile": "test-results-2025-09-22.json",
+  "summary": {
+    "totalTests": 20,
+    "successfulTests": 19,
+    "failedTests": 1,
+    "successRate": "95.00%",
+    "averageDuration": "20494.32ms",
+    "totalDuration": 389392
+  },
+  "toolUsage": [
+    {
+      "tool": "lookupCustomerFromDatabase",
+      "count": 19,
+      "percentage": "95.0%"
+    },
+    {
+      "tool": "directRepairHistory",
+      "count": 19,
+      "percentage": "95.0%"
+    }
+  ],
+  "errors": [
+    {
+      "id": 18,
+      "prompt": "cust008 の修理完了を記録してください...",
+      "error": "fetch failed"
+    }
+  ],
+  "recommendations": [
+    "🐌 Average response time > 10s - consider optimization",
+    "🔧 Limited tool usage - verify agent tool integration"
+  ]
+}

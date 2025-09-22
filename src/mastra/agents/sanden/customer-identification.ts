@@ -1,9 +1,11 @@
 import { Agent } from "@mastra/core/agent";
+import { createTool } from "@mastra/core/tools";
 import { bedrock } from "@ai-sdk/amazon-bedrock";
 import { customerTools } from "../../tools/sanden/customer-tools.js";
 import { commonTools } from "../../tools/sanden/common-tools.js";
 import { orchestratorTools } from "../../tools/sanden/orchestrator-tools.js";
 import { repairTools } from "../../tools/sanden/repair-tools.js";
+import { productTools } from "../../tools/sanden/product-tools.js";
 import { memoryTools } from "../../tools/sanden/memory-tools.js";
 import { z } from "zod";
 import { sharedMastraMemory, createMemoryIds, storeCustomerData, getCustomerData } from "../../shared-memory.js";
@@ -27,50 +29,11 @@ try {
     baseUrl: process.env.LANGFUSE_HOST,
   });
   const promptClient = await langfuse.getPrompt("customer-identification", undefined, { cacheTtlSeconds: 0 });
-  if (promptClient?.prompt?.trim()) {
-    REPAIR_AGENT_INSTRUCTIONS = promptClient.prompt.trim();
-    console.log(`[Langfuse] ✅ Loaded customer-identification prompt via SDK (v${promptClient.version})`);
-  } else {
-    console.warn(`[Langfuse] ⚠️ No prompt available for customer-identification`);
-  }
+  REPAIR_AGENT_INSTRUCTIONS = promptClient?.prompt?.trim() || "";
+  console.log(`[Langfuse] ✅ Loaded customer-identification prompt via SDK (v${promptClient.version}) - using original prompt like repair history`);
 } catch (error) {
   console.error("[Langfuse] Failed to load customer-identification prompt:", error);
-  // Fallback instructions when Langfuse is not available
-  REPAIR_AGENT_INSTRUCTIONS = `# 顧客識別エージェント
-
-あなたはサンデン・リテールシステムの顧客識別エージェントです。
-
-## 🚨 緊急優先ルール 🚨
-**製品関連リクエストを検知したら、即座に repair-agent に委譲する**
-
-## 製品リクエスト検知パターン
-以下のキーワード/フレーズを検知したら即座に委譲：
-- "製品"
-- "product"
-- "登録製品"
-- "顧客の登録製品を確認"
-- "show me my products"
-- "製品を確認"
-- "2" (メニューオプション)
-- "show me my products"
-- "what products do I have"
-- "my products"
-- "product list"
-- "製品リスト"
-
-## 委譲手順
-1. 顧客IDをメモリから取得
-2. delegateToツールで repair-agent に委譲
-3. 委譲パラメータ: {agentId: "repair-agent", context: {customerId: "取得したID"}}
-
-## 重要：他の処理をスキップ
-製品リクエスト検知時は：
-- 顧客データベース検索をスキップ
-- 他のツール使用をスキップ
-- 即座に委譲を実行
-
-## 既存機能
-- 製品リクエスト以外は通常の顧客識別処理を実行`;
+  REPAIR_AGENT_INSTRUCTIONS = "";
 }
 
 // Agent will be created after tool definitions
@@ -103,6 +66,7 @@ const enhancedDelegateTo = {
     });
   }
 };
+
 
 // Create a direct repair history tool that bypasses delegation
 const directRepairHistoryTool = {
@@ -222,9 +186,12 @@ export const routingAgentCustomerIdentification = new Agent({
     // Re-enable all tools with fixed schemas
     ...commonTools,
     ...customerTools,
+    ...repairTools,
+    ...productTools,
     delegateTo: enhancedDelegateTo,
     lookupCustomerFromDatabase: enhancedLookupCustomerFromDatabase,
     directRepairHistory: directRepairHistoryTool,
+    confirmAndLogRepair: orchestratorTools.confirmAndLogRepair,
   },
   memory: sharedMastraMemory, // Re-enable shared memory
 });
