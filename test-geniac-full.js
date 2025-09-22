@@ -278,7 +278,7 @@ async function runGeniacTestSuite() {
 
     // Small delay between tests
     await new Promise(resolve => setTimeout(resolve, 2000));
-  }
+  } // End of main test loop
 
   const totalTime = Date.now() - startTime;
 
@@ -485,4 +485,5 @@ runGeniacTestSuite().then(() => {
 }).catch(error => {
   console.error('❌ GENIAC test suite failed:', error);
   process.exit(1);
-});
+})
+};

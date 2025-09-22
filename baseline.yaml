@@ -109,23 +109,27 @@ comparison_targets:
 # DATASET CONFIGURATION
 # =============================================
 
-dataset:
-  current:
-    name: "customer-identification-20"
-    format: "JavaScript Array"
-    location: "test-all-prompts.js"
-    size: 20
-    intents: 12
-    coverage: "Customer identification and routing scenarios"
+  dataset:
+    current:
+      name: "customer-identification-20"
+      format: "JavaScript Array"
+      location: "test-all-prompts.js"
+      size: 20
+      intents: 12
+      coverage: "Customer identification and routing scenarios"
 
-  target:
-    name: "geniac-complete-120"
-    format: "JSONL"
-    location: "test-data/geniac-dataset.jsonl"
-    size: 120
-    intents: 12
-    variants_per_intent: 10
-    coverage: "Full GENIAC Topic 1 requirements"
+    target:
+      name: "geniac-complete-120"
+      format: "JSONL"
+      location: "test-data/geniac-dataset.jsonl"
+      size: 120
+      intents: 12
+      variants_per_intent: 10
+      coverage: "Full GENIAC Topic 1 requirements"
+
+    test_run_protocol:
+      smoke: "20 cases × 3 seeds (1, 11, 111)"
+      formal_geniac: "120 cases × 3 seeds, identical params for Claude (control) and Karakuri/Tsuzumi/Plamo"
 
 # =============================================
 # EVALUATION METRICS
@@ -182,17 +186,27 @@ evaluation:
     - name: "1セッション当たりコスト"
       unit: "USD"
       target: "< 0.002"
-      description: "Cost per conversation session"
+      description: "Cost per conversation session (input/output tokens)"
 
-    - name: "スループット"
+    - name: "スループット (TPS)"
       unit: "requests/sec"
       target: "> 2"
-      description: "Sustained request throughput"
+      description: "Sustained request throughput under burst load"
 
     - name: "3シード分散"
       unit: "variability"
       target: "< 10%"
-      description: "Response variability across 3 different random seeds"
+      description: "Response variability across 3 different random seeds [1,11,111]"
+
+    - name: "ツールシーケンス分散"
+      unit: "variability"
+      target: "< 5%"
+      description: "Consistency of selected tools and arguments across seeds"
+
+    - name: "出力妥当性分散"
+      unit: "variability"
+      target: "< 5%"
+      description: "JSON/schema validity and menu formatting stability across seeds"
 
 # =============================================
 # ACCEPTANCE CRITERIA (SLOs)

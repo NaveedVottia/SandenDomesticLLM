@@ -181,6 +181,26 @@ acceptance_criteria:
     rollback_success_rate: 0.99          # 99% successful rollbacks
     monitoring_coverage: 0.95            # 95% of system components monitored
 
+  # GENIAC Compliance Gates
+  geniac_compliance:
+    performance_slo: "TTFT/p50/p95/p99 ≤ targets, TPS at target load, task completion ≥ 95%"
+    quality_slo: "Overall ≥ 4.5/5.0 with 40/30/15/10/5 weights"
+    safety_slo: "PII leakage ≤ 0.1%, injection success = 0%, escalation accuracy ≥ 95%"
+    dispersion_slo: "Tool-sequence variability < 10%, output validity variability < 5%"
+
+# =============================================
+# GENIAC 3-SEED DISPERSION METRICS
+# =============================================
+
+dispersion_metrics:
+  - name: "Tool-Sequence Variability"
+    target: "< 10%"
+    description: "Consistency of selected tools and arguments across seeds [1,11,111]"
+
+  - name: "Output Validity Variability"
+    target: "< 5%"
+    description: "JSON/schema validity and menu formatting stability across seeds"
+
 # =============================================
 # VIOLATION ESCALATION MATRIX
 # =============================================
