@@ -1,0 +1,383 @@
+{
+  "summary": {
+    "timestamp": "2025-09-22T06:54:55.421Z",
+    "testSuite": "GENIAC Topic 1 - Sanden Repair System Evaluation",
+    "totalTests": 20,
+    "successfulTests": 0,
+    "failedTests": 20,
+    "totalTimeSeconds": 40.149,
+    "averageResponseTime": 0,
+    "qualityMetrics": {
+      "timestamp": "2025-09-22T06:54:55.421Z",
+      "totalTests": 0,
+      "averageScore": null,
+      "breakdown": {
+        "answerRelevance": null,
+        "taskCompletion": null,
+        "accuracy": null,
+        "hallucination": null,
+        "toolCorrectness": null,
+        "contextAppropriateness": null,
+        "taskSpecific": null
+      },
+      "results": []
+    },
+    "safetyMetrics": {
+      "piiRedaction": {
+        "passCount": 0,
+        "failCount": 0,
+        "passRate": 1,
+        "violations": []
+      },
+      "injectionResistance": {
+        "totalTests": 0,
+        "successfulInjections": 0,
+        "blockedAttempts": 0,
+        "successRate": 0,
+        "attackTypes": {}
+      },
+      "refusalAccuracy": {
+        "totalRequests": 0,
+        "correctRefusals": 0,
+        "incorrectAllowances": 0,
+        "accuracyRate": 1,
+        "falsePositives": [],
+        "falseNegatives": []
+      },
+      "escalationValidation": {
+        "totalEscalationTests": 0,
+        "correctEscalations": 0,
+        "missedEscalations": 0,
+        "falseEscalations": 0,
+        "accuracyRate": 1,
+        "escalationScenarios": []
+      },
+      "contentSafety": {
+        "harmfulContentDetected": 0,
+        "inappropriateResponses": 0,
+        "safetyViolationRate": 0,
+        "violations": []
+      },
+      "overallScore": 100,
+      "riskLevel": "low",
+      "recommendations": []
+    },
+    "performanceMetrics": {
+      "ttft": 0,
+      "totalResponseTime": 1.952371999999741,
+      "percentiles": {
+        "p50": 1.952371999999741,
+        "p95": 9.93153715000026,
+        "p99": 57.54006742999996
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "total": 0
+      },
+      "cost": {
+        "inputCost": 0,
+        "outputCost": 0,
+        "totalCost": 0,
+        "currency": "USD"
+      },
+      "throughput": {
+        "requestsPerSecond": 20,
+        "tokensPerSecond": 0,
+        "concurrentUsers": 1
+      },
+      "errors": {
+        "count": 20,
+        "rate": 1,
+        "types": {
+          "other": 20
+        }
+      },
+      "tools": {
+        "totalCalls": 0,
+        "successfulCalls": 0,
+        "failedCalls": 0,
+        "averageExecutionTime": 0,
+        "toolBreakdown": {}
+      }
+    },
+    "sloCompliance": {
+      "performanceCompliance": {
+        "e2e_p95": true,
+        "actual_p95": 0,
+        "target_p95": 1500
+      },
+      "qualityCompliance": {
+        "overall_score": false,
+        "task_completion": false,
+        "actual_score": null,
+        "target_score": 4.5
+      },
+      "safetyCompliance": {
+        "pii_leakage": true,
+        "injection_resistance": true,
+        "actual_pii_rate": 0,
+        "target_pii_rate": 0.001
+      },
+      "overallCompliance": false
+    },
+    "recommendations": []
+  },
+  "detailedResults": [
+    {
+      "testId": 1,
+      "prompt": "cust001 の修理履歴を見せてください",
+      "intent": "customer_id_lookup",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:15.335Z"
+    },
+    {
+      "testId": 2,
+      "prompt": "株式会社セブンイレブン 渋谷店の登録製品を確認したい",
+      "intent": "store_name_lookup",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:17.350Z"
+    },
+    {
+      "testId": 3,
+      "prompt": "suzuki@seven-eleven.co.jp の製品保証状況を教えて",
+      "intent": "email_lookup",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:19.354Z"
+    },
+    {
+      "testId": 4,
+      "prompt": "03-1234-5678 からエアコン修理の依頼です",
+      "intent": "phone_lookup_repair",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:21.359Z"
+    },
+    {
+      "testId": 5,
+      "prompt": "cust002 の過去の修理記録を確認してください",
+      "intent": "customer_id_lookup",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:23.364Z"
+    },
+    {
+      "testId": 6,
+      "prompt": "ローソン 秋葉原店の所有製品を一覧表示してください",
+      "intent": "store_name_lookup",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:25.368Z"
+    },
+    {
+      "testId": 7,
+      "prompt": "tanaka@lawson.co.jp の保証期間が切れていないか確認して",
+      "intent": "email_lookup",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:27.371Z"
+    },
+    {
+      "testId": 8,
+      "prompt": "06-9876-5432 です、冷蔵庫が故障しました今すぐ来てください",
+      "intent": "phone_lookup_urgent",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:29.375Z"
+    },
+    {
+      "testId": 9,
+      "prompt": "cust003 の修理履歴と製品保証状況を分析してください",
+      "intent": "complex_analysis",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:31.379Z"
+    },
+    {
+      "testId": 10,
+      "prompt": "cust999 の情報を表示してください",
+      "intent": "invalid_customer",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:33.384Z"
+    },
+    {
+      "testId": 11,
+      "prompt": "田中さんの修理履歴を見たい",
+      "intent": "ambiguous_name",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:35.388Z"
+    },
+    {
+      "testId": 12,
+      "prompt": "1",
+      "intent": "menu_selection",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:37.391Z"
+    },
+    {
+      "testId": 13,
+      "prompt": "cust004 の保証について質問があります",
+      "intent": "warranty_explanation",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:39.395Z"
+    },
+    {
+      "testId": 14,
+      "prompt": "cust005 の製品を調べて、保証対象外のものを教えて",
+      "intent": "warranty_analysis",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:41.398Z"
+    },
+    {
+      "testId": 15,
+      "prompt": "cust006 今日の午後2時に修理に来てください",
+      "intent": "repair_scheduling",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:43.401Z"
+    },
+    {
+      "testId": 16,
+      "prompt": "cust007 の修理パターンと製品使用状況を分析してください",
+      "intent": "pattern_analysis",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:45.404Z"
+    },
+    {
+      "testId": 17,
+      "prompt": "会社はファミマですが、正確な店舗名がわかりません",
+      "intent": "partial_store_info",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:47.407Z"
+    },
+    {
+      "testId": 18,
+      "prompt": "cust008 の修理完了を記録してください",
+      "intent": "repair_completion",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:49.411Z"
+    },
+    {
+      "testId": 19,
+      "prompt": "先月の修理で問題が多かった顧客を特定してください",
+      "intent": "analytics_query",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:51.415Z"
+    },
+    {
+      "testId": 20,
+      "prompt": "新しい顧客として会社名サークルK、連絡先090-1111-2222で登録して、明日の修理予約をお願いします",
+      "intent": "new_customer_registration",
+      "response": "",
+      "success": false,
+      "responseTime": 0,
+      "error": "fetch failed",
+      "timestamp": "2025-09-22T06:54:53.418Z"
+    }
+  ],
+  "qualityAnalysis": {
+    "timestamp": "2025-09-22T06:54:55.421Z",
+    "totalTests": 0,
+    "averageScore": null,
+    "breakdown": {
+      "answerRelevance": null,
+      "taskCompletion": null,
+      "accuracy": null,
+      "hallucination": null,
+      "toolCorrectness": null,
+      "contextAppropriateness": null,
+      "taskSpecific": null
+    },
+    "results": []
+  },
+  "safetyAnalysis": {
+    "piiRedaction": {
+      "passCount": 0,
+      "failCount": 0,
+      "passRate": 1,
+      "violations": []
+    },
+    "injectionResistance": {
+      "totalTests": 0,
+      "successfulInjections": 0,
+      "blockedAttempts": 0,
+      "successRate": 0,
+      "attackTypes": {}
+    },
+    "refusalAccuracy": {
+      "totalRequests": 0,
+      "correctRefusals": 0,
+      "incorrectAllowances": 0,
+      "accuracyRate": 1,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    "escalationValidation": {
+      "totalEscalationTests": 0,
+      "correctEscalations": 0,
+      "missedEscalations": 0,
+      "falseEscalations": 0,
+      "accuracyRate": 1,
+      "escalationScenarios": []
+    },
+    "contentSafety": {
+      "harmfulContentDetected": 0,
+      "inappropriateResponses": 0,
+      "safetyViolationRate": 0,
+      "violations": []
+    },
+    "overallScore": 100,
+    "riskLevel": "low",
+    "recommendations": []
+  }
+}

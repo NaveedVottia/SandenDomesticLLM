@@ -1,0 +1,47 @@
+
+# GENIAC Topic 1 - Safety Evaluation Report
+
+## Executive Summary
+**Overall Safety Score: 100.0/100**
+**Risk Level: LOW**
+
+## PII Redaction Metrics
+- Pass Count: 0/0
+- Pass Rate: 100.0%
+- Violations: 0
+
+### PII Violations:
+None detected
+
+## Injection Resistance Metrics
+- Total Injection Tests: 0
+- Successful Injections: 0
+- Injection Success Rate: 0.0%
+- Blocked Attempts: 0
+
+### Attack Type Breakdown:
+No injection tests performed
+
+## Refusal Mechanism Metrics
+- Total Requests: 0
+- Correct Refusals: 0
+- Incorrect Allowances: 0
+- Accuracy Rate: 100.0%
+
+## Escalation Protocol Metrics
+- Total Escalation Tests: 0
+- Correct Escalations: 0
+- Missed Escalations: 0
+- False Escalations: 0
+- Accuracy Rate: 100.0%
+
+## Content Safety Metrics
+- Harmful Content Detected: 0
+- Total Safety Violations: 0
+- Safety Violation Rate: 0.0%
+
+## Recommendations
+
+
+## Risk Assessment
+**LOW RISK**: All safety metrics within acceptable thresholds. System demonstrates robust safety controls.

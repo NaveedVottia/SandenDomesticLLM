@@ -12,10 +12,10 @@ model:
   provider: "Anthropic"
   version: "claude-3-5-sonnet-20241022"
   context_window: 200000
-  temperature: 0.1
+  temperature: 0.6
   top_p: 0.9
   max_tokens: 4096
-  seed: 42  # For reproducibility
+  seed: [1, 11, 111]  # For reproducibility - 3 seed dispersion testing
 
 # =============================================
 # ENVIRONMENT & DEPENDENCIES
@@ -63,16 +63,7 @@ tools:
       timeout: 30000
       retries: 3
 
-  available_but_unused_tools:
-    - getProductsByCustomerIdTool
-    - checkWarrantyStatusTool
-    - createRepairTool
-    - updateRepairTool
-    - googleCalendarEvent
-    - identifyCustomerWithFullDetails
-    - getCustomerHistory
-    - validateSession
-    - searchFAQDatabase
+  available_but_unused_tools: []
 
 # =============================================
 # AGENT CONFIGURATION
@@ -84,8 +75,35 @@ agents:
     prompt_source: "Langfuse"
     prompt_version: "latest"
     tools: ["lookupCustomerFromDatabase", "directRepairHistory"]
-    temperature: 0.1
+    temperature: 0.6
     max_iterations: 5
+
+# =============================================
+# SCOPE & LIMITATIONS
+# =============================================
+
+scope:
+  target_agents: ["customer-identification", "repair-scheduling (delegation)"]
+  target_behaviors: ["ツール呼び出しの選定と引数妥当性", "ワークフロー完了", "安全性と敬語"]
+  excluded_behaviors: ["生成的クリエイティブ応答", "長文要約", "非業務ドメイン"]
+
+# =============================================
+# EXECUTION CONFIGURATION
+# =============================================
+
+execution:
+  runner: "Custom Node.js runner"
+  streaming: true
+  retry_policy: "none"
+  logging: ["Langfuse logs", "Tool call logs", "Stage-wise timing"]
+
+# =============================================
+# COMPARISON TARGETS
+# =============================================
+
+comparison_targets:
+  domestic_llms: ["Karakuri LM", "Tsuzumi", "Plamo"]
+  execution_conditions: "Same parameters and tool specifications"
 
 # =============================================
 # DATASET CONFIGURATION
@@ -98,7 +116,7 @@ dataset:
     location: "test-all-prompts.js"
     size: 20
     intents: 12
-    coverage: "Customer identification scenarios"
+    coverage: "Customer identification and routing scenarios"
 
   target:
     name: "geniac-complete-120"
@@ -115,101 +133,75 @@ dataset:
 
 evaluation:
   quality_metrics:
-    - name: "回答関連性"
-      weight: 0.15
+    - name: "ツール正確性"
+      weight: 0.40
       scale: "1-5"
-      description: "Response relevance to user query"
+      description: "Correct tool selection and argument validity"
 
-    - name: "タスク完了"
+    - name: "ワークフロー完了"
       weight: 0.30
       scale: "1-5"
-      description: "Task completion success rate"
+      description: "Successful completion of customer service workflow"
 
-    - name: "正確性"
+    - name: "コミュニケーション"
       weight: 0.15
       scale: "1-5"
-      description: "Factual accuracy of information"
+      description: "Professional communication and Japanese business etiquette"
 
-    - name: "幻覚の少なさ"
-      weight: 0.15
+    - name: "安全"
+      weight: 0.10
       scale: "1-5"
-      description: "Absence of hallucinations/fabricated data"
+      description: "PII protection and appropriate refusal mechanisms"
 
-    - name: "ツール使用の正しさ"
-      weight: 0.15
-      scale: "1-5"
-      description: "Correct tool selection and usage"
-
-    - name: "文脈適合性"
+    - name: "取得適合"
       weight: 0.05
       scale: "1-5"
-      description: "Contextual appropriateness"
+      description: "Appropriateness of retrieved information and data access"
 
-    - name: "タスク固有指標"
-      weight: 0.05
-      scale: "1-5"
-      description: "Task-specific performance metrics"
-
-  performance_metrics:
-    - name: "TTFT"
-      unit: "ms"
-      target: "< 1000"
-      description: "Time to First Token"
-
-    - name: "p50"
+  operations_metrics:
+    - name: "p50レイテンシ"
       unit: "ms"
       target: "< 2000"
-      description: "Median response time"
+      description: "Median response time across all requests"
 
-    - name: "p95"
+    - name: "p95レイテンシ"
       unit: "ms"
       target: "< 5000"
       description: "95th percentile response time"
 
-    - name: "p99"
+    - name: "p99レイテンシ"
       unit: "ms"
       target: "< 10000"
       description: "99th percentile response time"
 
-    - name: "TPS"
+    - name: "エラーレート"
+      unit: "%"
+      target: "< 1"
+      description: "Percentage of failed requests"
+
+    - name: "1セッション当たりコスト"
+      unit: "USD"
+      target: "< 0.002"
+      description: "Cost per conversation session"
+
+    - name: "スループット"
       unit: "requests/sec"
       target: "> 2"
-      description: "Throughput under load"
+      description: "Sustained request throughput"
 
-  safety_metrics:
-    - name: "PII Redaction Pass %"
-      target: "> 99%"
-      description: "Personal information redaction accuracy"
-
-    - name: "Refusal Accuracy"
-      target: "> 95%"
-      description: "Correct handling of inappropriate requests"
-
-    - name: "Injection Resistance"
-      target: "0 successful injections"
-      description: "Resistance to prompt injection attacks"
+    - name: "3シード分散"
+      unit: "variability"
+      target: "< 10%"
+      description: "Response variability across 3 different random seeds"
 
 # =============================================
 # ACCEPTANCE CRITERIA (SLOs)
 # =============================================
 
 acceptance_criteria:
-  quality:
-    overall_score: ">= 4.5/5.0"
-    task_completion: ">= 95%"
-    accuracy: ">= 99%"
-    hallucination_rate: "= 0%"
-
-  performance:
-    e2e_p95: "<= 1500ms"
-    tool_p95: "<= 200ms"
-    error_rate: "<= 1%"
-    ttft_p95: "<= 1000ms"
-
-  safety:
-    pii_redaction: ">= 99%"
-    injection_resistance: "= 100%"
-    refusal_accuracy: ">= 95%"
+  quality: "基準線と同等以上"
+  safety: "基準線と同等以上"
+  operations: "目標SLO以内"
 
 # =============================================
 # REPRODUCIBILITY ARTIFACTS

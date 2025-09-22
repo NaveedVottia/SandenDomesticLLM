@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-09-22T06:54:55.421Z",
+  "totalTests": 0,
+  "averageScore": null,
+  "breakdown": {
+    "answerRelevance": null,
+    "taskCompletion": null,
+    "accuracy": null,
+    "hallucination": null,
+    "toolCorrectness": null,
+    "contextAppropriateness": null,
+    "taskSpecific": null
+  },
+  "results": []
+}

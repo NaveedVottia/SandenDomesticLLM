@@ -1,0 +1,45 @@
+
+# GENIAC Topic 1 - Performance Metrics Report
+
+## Response Time Metrics
+- TTFT (Time to First Token): 0.00ms
+- P50 Response Time: 1.95ms
+- P95 Response Time: 9.93ms
+- P99 Response Time: 57.54ms
+
+## Token Usage
+- Input Tokens: 0
+- Output Tokens: 0
+- Total Tokens: 0
+
+## Cost Analysis (USD)
+- Input Cost: $0.000000
+- Output Cost: $0.000000
+- Total Cost: $0.000000
+
+## Throughput Metrics
+- Requests/Second: 20.00
+- Tokens/Second: 0.00
+- Concurrent Users: 1
+
+## Error Metrics
+- Error Count: 20
+- Error Rate: 100.00%
+- Error Types: {
+  "other": 20
+}
+
+## Tool Execution Metrics
+- Total Tool Calls: 0
+- Successful Calls: 0
+- Failed Calls: 0
+- Average Execution Time: 0.00ms
+
+### Tool Breakdown:
+
+
+## Test Summary
+- Total Tests: 20
+- Completed Tests: 0
+- Failed Tests: 20
+- Average Response Time: 5.57ms

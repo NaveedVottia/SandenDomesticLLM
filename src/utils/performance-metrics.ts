@@ -114,7 +114,8 @@ export class MetricsCollector {
       execution.toolsExecuted = execution.toolsExecuted || [];
       execution.toolsExecuted.push({
         toolName,
-        startTime: performance.now()
+        startTime: performance.now(),
+        success: true // Default to true, will be updated when tool completes
       });
     }
   }
