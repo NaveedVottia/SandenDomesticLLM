@@ -596,7 +596,7 @@ app.post("/api/agents/customer-identification/stream", async (req: Request, res:
   }
 });
 
-// Legacy endpoint for UI compatibility - redirects to customer-identification
+// Session-aware workflow endpoint with AI SDK v5 compatibility
 app.post("/api/agents/repair-workflow-orchestrator/stream", async (req: Request, res: Response) => {
   try {
     const messages = Array.isArray(req.body?.messages) ? req.body.messages : [];
@@ -607,11 +607,51 @@ app.post("/api/agents/repair-workflow-orchestrator/stream", async (req: Request,
     const resourceId = req.body?.resourceId || session.customerId || sessionId;
     const threadId = req.body?.threadId || `thread-${sessionId}`;
 
-    const agent = await getAgentById("customer-identification");
+    // Extract user input from messages
+    const userMessage = messages.find((msg: any) => msg.role === 'user');
+    const userInput = userMessage?.content || '';
 
-    if (!agent) {
-      return res.status(500).json({ error: "Agent 'customer-identification' not found" });
+    // Extract test parameters from request body
+    const testCaseId = req.body?.testCaseId || `workflow_test_${Date.now()}`;
+    const evaluationMode = req.body?.evaluationMode !== false; // Default to true
+
+    console.log(`🔍 [Workflow Endpoint] Processing with session-aware workflow`);
+    console.log(`🔍 User input: "${userInput}"`);
+    console.log(`🔍 Test case ID: ${testCaseId}`);
+    console.log(`🔍 Evaluation mode: ${evaluationMode}`);
+
+    // Import our session-aware workflow
+    const { runCustomerIdentificationWorkflow } = await import('./mastra/workflows/sanden/customer-identification-workflow.js');
+
+    // Run the session-aware workflow with session continuity
+    const workflowResult = await runCustomerIdentificationWorkflow(userInput, {
+      sessionId, // Pass sessionId for continuity
+      testCaseId,
+      evaluationMode
+    });
+
+    console.log(`✅ [Workflow Endpoint] Workflow completed: ${workflowResult.success}`);
+    console.log(`📊 Session ID: ${workflowResult.sessionId}`);
+    console.log(`🎯 Evaluation complete: ${workflowResult.evaluationComplete}`);
+
+    // Convert workflow result to AI SDK v5 format
+    const responseContent = workflowResult.response;
+    const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Send AI SDK v5 formatted response
+    res.write(`f:{"messageId":"${messageId}"}\n`);
+
+    // Stream the response content in chunks
+    const chunks = responseContent.match(/.{1,50}/g) || [responseContent];
+    for (const chunk of chunks) {
+      res.write(`0:"${chunk.replace(/"/g, '\\"')}"\n`);
     }
+
+    // Send completion metadata
+    res.write(`e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":${responseContent.length}},"isContinued":false}\n`);
+    res.write(`d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":${responseContent.length}}}\n`);
+
+    res.end();
 
     console.log(`🔍 Processing UI request with ${messages.length} messages`);
     console.log(`🔍 Resource ID: ${resourceId}`);

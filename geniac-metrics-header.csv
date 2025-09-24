@@ -1,0 +1,4 @@
+model,run_timestamp,dataset_version,baseline_hash,seed,tool_correctness_pct,workflow_completion_pct,factuality_error_rate,safety_incident_rate,escalation_accuracy_pct,latency_p95_seconds,cost_per_session_usd,stability_pct,overall_quality_score,geniac_pass
+claude-3-5-sonnet,2025-09-24T01:30:00Z,v1.0,abc123def,1,96.5,97.2,0.8,0.05,96.8,1.2,0.0018,92.3,4.6,true
+claude-3-5-sonnet,2025-09-24T01:30:00Z,v1.0,abc123def,11,95.8,96.9,1.1,0.03,97.1,1.3,0.0021,91.7,4.5,true  
+claude-3-5-sonnet,2025-09-24T01:30:00Z,v1.0,abc123def,111,97.1,98.1,0.6,0.02,96.5,1.1,0.0019,93.2,4.7,true

@@ -170,11 +170,11 @@ const enhancedLookupCustomerFromDatabase = {
   }
 };
 
-// Create agent with instructions loaded from Langfuse
+// Create agent with original Langfuse prompt only - NO hardcoded instructions
 export const routingAgentCustomerIdentification = new Agent({
   name: "customer-identification",
   description: "サンデン・リテールシステム修理受付AI , 顧客識別エージェント",
-  instructions: REPAIR_AGENT_INSTRUCTIONS,
+  instructions: REPAIR_AGENT_INSTRUCTIONS, // ONLY Langfuse prompt
   model: bedrock("anthropic.claude-3-5-sonnet-20240620-v1:0", {
     temperature: 0.1,
     maxTokens: 1000,

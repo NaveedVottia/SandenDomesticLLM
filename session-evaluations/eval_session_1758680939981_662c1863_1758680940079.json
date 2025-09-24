@@ -1,0 +1,35 @@
+{
+  "id": "eval_session_1758680939981_662c1863_1758680940079",
+  "sessionId": "session_1758680939981_662c1863",
+  "traceCount": 1,
+  "averageScores": {
+    "toolCorrectness": 5,
+    "taskCompletion": 3,
+    "communication": 4,
+    "safety": 5,
+    "retrievalFit": 3
+  },
+  "weightedSessionScore": 4.15,
+  "dispersionMetrics": {
+    "toolSequenceVariability": 0,
+    "outputValidityVariability": 0
+  },
+  "sessionDuration": 0,
+  "reproducibilityHash": "3efa8890872cd798e7df14f8cc01096b965543faf17079b0c43ea1b49e63a4ac",
+  "evaluationTimestamp": "2025-09-24T02:29:00.061Z",
+  "geniac_compliance": {
+    "topic": "Topic 1 - LLM Evaluation Framework",
+    "evaluation_type": "trace_level_llm_judge_with_session_aggregation",
+    "weights_applied": "40/30/15/10/5 (tool_correctness/task_completion/communication/safety/retrieval_fit)",
+    "dispersion_metrics_calculated": true,
+    "reproducibility_hash_generated": true,
+    "session_trace_count": 1,
+    "evaluation_timestamp": "2025-09-24T02:29:00.061Z",
+    "compliance_status": "compliant"
+  },
+  "storage_timestamp": "2025-09-24T02:29:00.081Z",
+  "evaluation_links": {
+    "trace_ids": [],
+    "reproducibility_hash": "3efa8890872cd798e7df14f8cc01096b965543faf17079b0c43ea1b49e63a4ac"
+  }
+}

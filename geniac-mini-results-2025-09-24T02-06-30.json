@@ -1,0 +1,73 @@
+{
+  "test_summary": {
+    "total_tests": 3,
+    "successful_tests": 0,
+    "success_rate": 0,
+    "average_response_time_ms": 853.6666666666666,
+    "total_execution_time_s": 5.565,
+    "sessions_created": 0,
+    "evaluations_completed": 0
+  },
+  "test_results": [
+    {
+      "testId": "test_001",
+      "prompt": "cust001 の修理履歴を見せてください",
+      "intent": "customer_lookup",
+      "sessionId": "",
+      "response": "申し訳ございませんが、処理中にエラーが発生しました。",
+      "success": false,
+      "responseTime": 2552,
+      "evaluationComplete": false,
+      "timestamp": "2025-09-24T02:06:27.875Z"
+    },
+    {
+      "testId": "test_002",
+      "prompt": "3",
+      "intent": "contact_form",
+      "sessionId": "",
+      "response": "申し訳ございませんが、処理中にエラーが発生しました。",
+      "success": false,
+      "responseTime": 6,
+      "evaluationComplete": false,
+      "timestamp": "2025-09-24T02:06:28.882Z"
+    },
+    {
+      "testId": "test_003",
+      "prompt": "一般的な質問があります",
+      "intent": "faq_service",
+      "sessionId": "",
+      "response": "申し訳ございませんが、処理中にエラーが発生しました。",
+      "success": false,
+      "responseTime": 3,
+      "evaluationComplete": false,
+      "timestamp": "2025-09-24T02:06:29.886Z"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "test_001",
+      "prompt": "cust001 の修理履歴を見せてください",
+      "intent": "customer_lookup",
+      "pii_in_text": false,
+      "escalation_expected": false,
+      "expected_workflow": "Agent delegation + session continue"
+    },
+    {
+      "id": "test_002",
+      "prompt": "3",
+      "intent": "contact_form",
+      "pii_in_text": false,
+      "escalation_expected": false,
+      "expected_workflow": "Menu handling + session end + aggregation"
+    },
+    {
+      "id": "test_003",
+      "prompt": "一般的な質問があります",
+      "intent": "faq_service",
+      "pii_in_text": false,
+      "escalation_expected": false,
+      "expected_workflow": "Menu handling + session continue"
+    }
+  ],
+  "timestamp": "2025-09-24T02:06:30.889Z"
+}
