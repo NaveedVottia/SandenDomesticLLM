@@ -1,0 +1,25 @@
+# Required IAM Policy for Karakuri SageMaker Setup
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "sagemaker:CreateModel",
+                "sagemaker:CreateEndpointConfig",
+                "sagemaker:CreateEndpoint",
+                "sagemaker:DescribeEndpoint",
+                "sagemaker:DeleteModel",
+                "sagemaker:DeleteEndpoint",
+                "sagemaker:DeleteEndpointConfig",
+                "sagemaker:ListModels",
+                "sagemaker:ListEndpoints",
+                "iam:GetRole",
+                "iam:ListRoles",
+                "iam:CreateRole",
+                "iam:AttachRolePolicy"
+            ],
+            "Resource": "*"
+        }
+    ]
+}

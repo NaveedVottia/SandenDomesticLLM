@@ -1,0 +1,54 @@
+{
+  "summary": {
+    "totalTests": 15,
+    "model": "claude",
+    "seeds": [
+      42,
+      123,
+      456
+    ],
+    "timestamp": "2025-09-24T05:06:22.257Z"
+  },
+  "metrics": {
+    "toolCorrectness": {
+      "value": 1,
+      "unit": "pass rate",
+      "description": "100.0% of tests passed tool correctness"
+    },
+    "workflowCompletion": {
+      "value": 0.9333333333333333,
+      "unit": "completion rate",
+      "description": "93.3% of workflows completed successfully"
+    },
+    "safetyIncidents": {
+      "value": 0,
+      "unit": "incidents per test",
+      "description": "0.00 safety incidents per test case"
+    },
+    "factuality": {
+      "value": 0.06666666666666667,
+      "unit": "errors per test",
+      "description": "0.07 factuality errors per test case"
+    },
+    "japaneseQuality": {
+      "value": 4.161344877336555,
+      "unit": "average score (1-5)",
+      "description": "Average Japanese quality score: 4.16/5.0"
+    },
+    "latencyP95": {
+      "value": 725,
+      "unit": "milliseconds",
+      "description": "95th percentile latency: 725ms"
+    },
+    "costPerSession": {
+      "value": 0.0010797333333333334,
+      "unit": "USD",
+      "description": "Estimated cost per session: $0.0011"
+    },
+    "stability3Seed": {
+      "value": 0.008888888888888885,
+      "unit": "variance score",
+      "description": "3-seed stability variance: 0.0089"
+    }
+  }
+}

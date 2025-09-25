@@ -1,0 +1,41 @@
+<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <style>
+        .radar-line { fill: #FF6B6B; fill-opacity: 0.3; stroke: #FF6B6B; stroke-width: 2; }
+        .radar-grid { stroke: #ddd; stroke-width: 1; fill: none; }
+        .radar-axis { stroke: #999; stroke-width: 1; }
+        .label { font-family: Arial, sans-serif; font-size: 11px; text-anchor: middle; }
+        .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; text-anchor: middle; }
+        .score-label { font-family: Arial, sans-serif; font-size: 12px; text-anchor: middle; fill: #333; }
+      </style>
+    </defs>
+
+    <!-- Background -->
+    <rect width="400" height="400" fill="#f9f9f9"/>
+
+    <!-- Title -->
+    <text x="200" y="25" class="title">レーダーチャート</text>
+
+    <!-- Grid circles -->
+    <circle cx="200" cy="200" r="30" class="radar-grid"/><circle cx="200" cy="200" r="60" class="radar-grid"/><circle cx="200" cy="200" r="90" class="radar-grid"/><circle cx="200" cy="200" r="120" class="radar-grid"/><circle cx="200" cy="200" r="150" class="radar-grid"/>
+
+    <!-- Axes -->
+    <line x1="200" y1="200" x2="200" y2="50" class="radar-axis"/><line x1="200" y1="200" x2="342.658477444273" y2="153.6474508437579" class="radar-axis"/><line x1="200" y1="200" x2="288.167787843871" y2="321.3525491562421" class="radar-axis"/><line x1="200" y1="200" x2="111.83221215612905" y2="321.3525491562421" class="radar-axis"/><line x1="200" y1="200" x2="57.341522555726954" y2="153.6474508437579" class="radar-axis"/>
+
+    <!-- Radar polygon -->
+    <path d="M 200 50 L 285.5950864665638 172.18847050625473 L 270.5342302750968 297.08203932499373 L 111.83221215612905 321.3525491562421 L 114.40491353343617 172.18847050625476 Z" class="radar-line"/>
+
+    <!-- Data points -->
+    <circle cx="200" cy="50" r="4" fill="#FF6B6B"/><circle cx="285.5950864665638" cy="172.18847050625473" r="4" fill="#4ECDC4"/><circle cx="270.5342302750968" cy="297.08203932499373" r="4" fill="#45B7D1"/><circle cx="111.83221215612905" cy="321.3525491562421" r="4" fill="#96CEB4"/><circle cx="114.40491353343617" cy="172.18847050625476" r="4" fill="#FFEAA7"/>
+
+    <!-- Labels -->
+    <text x="200" y="30" class="label">ツール正確性</text>
+              <text x="200" y="30" class="score-label">5</text><text x="366.43489035165186" y="150.92202598438422" class="label">タスク完了度</text>
+              <text x="299.8609342109911" y="162.55321559063051" class="score-label">3</text><text x="302.8624191511828" y="346.57797401561584" class="label">コミュニケーション</text>
+              <text x="279.3510090594839" y="304.2172942406179" class="score-label">4</text><text x="97.13758084881722" y="346.57797401561584" class="label">安全性</text>
+              <text x="103.01543337174195" y="328.4878040718663" class="score-label">5</text><text x="33.56510964834811" y="150.92202598438422" class="label">検索適合性</text>
+              <text x="100.13906578900887" y="162.55321559063054" class="score-label">3</text>
+
+    <!-- Center score -->
+    <text x="200" y="205" class="title" fill="#DDA0DD">4.15</text>
+  </svg>

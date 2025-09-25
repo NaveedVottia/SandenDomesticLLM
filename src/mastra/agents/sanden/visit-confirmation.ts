@@ -7,7 +7,7 @@ import { productTools } from "../../tools/sanden/product-tools.js";
 import { commonTools } from "../../tools/sanden/common-tools.js";
 import { memoryTools } from "../../tools/sanden/memory-tools.js";
 import { confirmAndLogRepair } from "../../tools/sanden/repair-logging.js";
-import { loadLangfusePrompt } from "../../prompts/langfuse";
+import { loadLangfusePrompt } from "../../prompts/langfuse.js";
 import { langfuse } from "../../../integrations/langfuse.js";
 import { sharedMastraMemory } from "../../shared-memory.js";
 import { createTool } from "@mastra/core/tools";

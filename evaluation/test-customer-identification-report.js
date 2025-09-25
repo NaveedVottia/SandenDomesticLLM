@@ -145,10 +145,10 @@ async function runCustomerIdentificationReport() {
   const totalTime = Date.now() - startTime;
 
   // Generate comprehensive report
-  generateEvaluationReport(results, totalTime, totalResponseTime);
+  await generateEvaluationReport(results, totalTime, totalResponseTime);
 }
 
-function generateEvaluationReport(results, totalTime, totalResponseTime) {
+async function generateEvaluationReport(results, totalTime, totalResponseTime) {
   console.log('\n' + '=' .repeat(70));
   console.log('📊 CUSTOMER IDENTIFICATION EVALUATION REPORT');
   console.log('='.repeat(70));

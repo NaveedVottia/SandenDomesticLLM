@@ -1,0 +1,32 @@
+{
+  "evaluation": {
+    "framework": "GENIAC Area 01",
+    "model": "Karakuri LM 8x7B Instruct (SageMaker)",
+    "baseline": "Claude 3.5 Sonnet (Bedrock)",
+    "testCases": 5,
+    "seeds": [
+      42,
+      123,
+      456
+    ],
+    "timestamp": "2025-09-24T05:27:13.755Z"
+  },
+  "environment": {
+    "region": "us-east-1",
+    "endpoint": "Endpoint-KARAKURI-LM-8x7b-instruct-1"
+  },
+  "metrics": {
+    "quality": [
+      "toolCorrectness",
+      "workflowCompletion",
+      "safetyIncidents",
+      "factuality",
+      "japaneseQuality"
+    ],
+    "operational": [
+      "latencyP95",
+      "costPerSession",
+      "stability3Seed"
+    ]
+  }
+}

@@ -1,0 +1,167 @@
+[
+  {
+    "sessionId": "claude-42-login_cust009",
+    "timestamp": "2025-09-24T06:28:11.426Z",
+    "model": "claude",
+    "seed": 42,
+    "testId": "login_cust009",
+    "prompt": "CUST009",
+    "response": "No response captured",
+    "duration": 2909,
+    "outcome": "failed"
+  },
+  {
+    "sessionId": "claude-42-repairs_history_request",
+    "timestamp": "2025-09-24T06:28:11.427Z",
+    "model": "claude",
+    "seed": 42,
+    "testId": "repairs_history_request",
+    "prompt": "修理履歴を確認したい",
+    "response": "No response captured",
+    "duration": 2495,
+    "outcome": "failed"
+  },
+  {
+    "sessionId": "claude-42-related_products_request",
+    "timestamp": "2025-09-24T06:28:11.427Z",
+    "model": "claude",
+    "seed": 42,
+    "testId": "related_products_request",
+    "prompt": "登録製品を確認したい",
+    "response": "No response captured",
+    "duration": 3964,
+    "outcome": "failed"
+  },
+  {
+    "sessionId": "claude-42-repair_request",
+    "timestamp": "2025-09-24T06:28:11.427Z",
+    "model": "claude",
+    "seed": 42,
+    "testId": "repair_request",
+    "prompt": "修理を依頼したい",
+    "response": "No response captured",
+    "duration": 1778,
+    "outcome": "failed"
+  },
+  {
+    "sessionId": "claude-42-delegation_check",
+    "timestamp": "2025-09-24T06:28:11.427Z",
+    "model": "claude",
+    "seed": 42,
+    "testId": "delegation_check",
+    "prompt": "機械が壊れたので修理をお願いします",
+    "response": "No response captured",
+    "duration": 1581,
+    "outcome": "failed"
+  },
+  {
+    "sessionId": "claude-123-login_cust009",
+    "timestamp": "2025-09-24T06:28:11.427Z",
+    "model": "claude",
+    "seed": 123,
+    "testId": "login_cust009",
+    "prompt": "CUST009",
+    "response": "No response captured",
+    "duration": 4154,
+    "outcome": "failed"
+  },
+  {
+    "sessionId": "claude-123-repairs_history_request",
+    "timestamp": "2025-09-24T06:28:11.427Z",
+    "model": "claude",
+    "seed": 123,
+    "testId": "repairs_history_request",
+    "prompt": "修理履歴を確認したい",
+    "response": "No response captured",
+    "duration": 2633,
+    "outcome": "failed"
+  },
+  {
+    "sessionId": "claude-123-related_products_request",
+    "timestamp": "2025-09-24T06:28:11.427Z",
+    "model": "claude",
+    "seed": 123,
+    "testId": "related_products_request",
+    "prompt": "登録製品を確認したい",
+    "response": "No response captured",
+    "duration": 4402,
+    "outcome": "failed"
+  },
+  {
+    "sessionId": "claude-123-repair_request",
+    "timestamp": "2025-09-24T06:28:11.427Z",
+    "model": "claude",
+    "seed": 123,
+    "testId": "repair_request",
+    "prompt": "修理を依頼したい",
+    "response": "No response captured",
+    "duration": 1743,
+    "outcome": "failed"
+  },
+  {
+    "sessionId": "claude-123-delegation_check",
+    "timestamp": "2025-09-24T06:28:11.427Z",
+    "model": "claude",
+    "seed": 123,
+    "testId": "delegation_check",
+    "prompt": "機械が壊れたので修理をお願いします",
+    "response": "No response captured",
+    "duration": 1583,
+    "outcome": "failed"
+  },
+  {
+    "sessionId": "claude-456-login_cust009",
+    "timestamp": "2025-09-24T06:28:11.427Z",
+    "model": "claude",
+    "seed": 456,
+    "testId": "login_cust009",
+    "prompt": "CUST009",
+    "response": "No response captured",
+    "duration": 2789,
+    "outcome": "failed"
+  },
+  {
+    "sessionId": "claude-456-repairs_history_request",
+    "timestamp": "2025-09-24T06:28:11.427Z",
+    "model": "claude",
+    "seed": 456,
+    "testId": "repairs_history_request",
+    "prompt": "修理履歴を確認したい",
+    "response": "No response captured",
+    "duration": 2957,
+    "outcome": "failed"
+  },
+  {
+    "sessionId": "claude-456-related_products_request",
+    "timestamp": "2025-09-24T06:28:11.427Z",
+    "model": "claude",
+    "seed": 456,
+    "testId": "related_products_request",
+    "prompt": "登録製品を確認したい",
+    "response": "No response captured",
+    "duration": 3556,
+    "outcome": "failed"
+  },
+  {
+    "sessionId": "claude-456-repair_request",
+    "timestamp": "2025-09-24T06:28:11.427Z",
+    "model": "claude",
+    "seed": 456,
+    "testId": "repair_request",
+    "prompt": "修理を依頼したい",
+    "response": "No response captured",
+    "duration": 1610,
+    "outcome": "failed"
+  },
+  {
+    "sessionId": "claude-456-delegation_check",
+    "timestamp": "2025-09-24T06:28:11.427Z",
+    "model": "claude",
+    "seed": 456,
+    "testId": "delegation_check",
+    "prompt": "機械が壊れたので修理をお願いします",
+    "response": "No response captured",
+    "duration": 1639,
+    "outcome": "failed"
+  }
+]

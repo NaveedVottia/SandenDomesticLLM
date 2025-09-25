@@ -261,8 +261,8 @@ const storeSessionEvaluationRecord = createStep({
           storageResult.json = { status: 'success', path };
           console.log(`   📄 JSON export: saved to ${path}`);
         } catch (error) {
-          console.error(`   ❌ JSON export failed: ${error.message}`);
-          storageResult.json = { status: 'failed', error: error.message };
+          console.error(`   ❌ JSON export failed: ${error instanceof Error ? error.message : String(error)}`);
+          storageResult.json = { status: 'failed', error: error instanceof Error ? error.message : String(error) };
         }
       }
 

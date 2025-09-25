@@ -1,0 +1,45 @@
+{
+  "submission": {
+    "framework": "GENIAC Area 01",
+    "system": "Sanden Repair System",
+    "model": "Karakuri LM 8x7B Instruct",
+    "timestamp": "2025-09-24T05:44:39.545Z",
+    "packageVersion": "1.0.0"
+  },
+  "contents": {
+    "evidence": [
+      "evaluation-results.json"
+    ],
+    "traces": [
+      "rerun-evaluation.sh"
+    ],
+    "config": [
+      "evaluation-config.json"
+    ],
+    "demo": [
+      "demo-video.mp4 (add manually)"
+    ]
+  },
+  "metrics": {
+    "quality": [
+      "toolCorrectness",
+      "workflowCompletion",
+      "safetyIncidents",
+      "factuality",
+      "japaneseQuality"
+    ],
+    "operational": [
+      "latencyP95",
+      "costPerSession",
+      "stability3Seed"
+    ]
+  },
+  "reproducibility": {
+    "command": "cd traces && ./rerun-evaluation.sh",
+    "requirements": [
+      "Node.js",
+      "AWS credentials",
+      "Karakuri endpoint"
+    ]
+  }
+}

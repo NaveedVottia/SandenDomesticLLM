@@ -1,0 +1,49 @@
+<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <style>
+        .bar { fill-opacity: 0.8; stroke: #333; stroke-width: 1; }
+        .bar:hover { fill-opacity: 1; }
+        .axis { stroke: #333; stroke-width: 1; }
+        .grid { stroke: #ddd; stroke-width: 0.5; }
+        .label { font-family: Arial, sans-serif; font-size: 12px; text-anchor: middle; }
+        .title { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; text-anchor: middle; }
+        .value-label { font-family: Arial, sans-serif; font-size: 11px; text-anchor: middle; fill: #333; }
+      </style>
+    </defs>
+
+    <!-- Background -->
+    <rect width="800" height="400" fill="#f9f9f9"/>
+
+    <!-- Title -->
+    <text x="400" y="25" class="title">GENIAC 評価指標 - セッション session_1758680914709_8ef3e467</text>
+
+    <!-- Y-axis -->
+    <line x1="80" y1="40" x2="80" y2="320" class="axis"/>
+    <!-- Y-axis labels -->
+    <text x="70" y="325" class="label">0</text>
+              <line x1="75" y1="320" x2="80" y2="320" class="grid"/><text x="70" y="269" class="label">1</text>
+              <line x1="75" y1="264" x2="80" y2="264" class="grid"/><text x="70" y="213" class="label">2</text>
+              <line x1="75" y1="208" x2="80" y2="208" class="grid"/><text x="70" y="157" class="label">3</text>
+              <line x1="75" y1="152" x2="80" y2="152" class="grid"/><text x="70" y="101" class="label">4</text>
+              <line x1="75" y1="96" x2="80" y2="96" class="grid"/><text x="70" y="45" class="label">5</text>
+              <line x1="75" y1="40" x2="80" y2="40" class="grid"/>
+
+    <!-- Bars -->
+    <rect x="90" y="40" width="116" height="280"
+             fill="#FF6B6B" class="bar"/>
+             <text x="148" y="35" class="value-label">5</text><rect x="226" y="152" width="116" height="168"
+             fill="#4ECDC4" class="bar"/>
+             <text x="284" y="147" class="value-label">3</text><rect x="362" y="96" width="116" height="224"
+             fill="#45B7D1" class="bar"/>
+             <text x="420" y="91" class="value-label">4</text><rect x="498" y="40" width="116" height="280"
+             fill="#96CEB4" class="bar"/>
+             <text x="556" y="35" class="value-label">5</text><rect x="634" y="152" width="116" height="168"
+             fill="#FFEAA7" class="bar"/>
+             <text x="692" y="147" class="value-label">3</text>
+
+    <!-- X-axis labels -->
+    <text x="148" y="340" class="label" transform="rotate(-45 148 340)">ツール正確性</text><text x="284" y="340" class="label" transform="rotate(-45 284 340)">タスク完了度</text><text x="420" y="340" class="label" transform="rotate(-45 420 340)">コミュニケーション</text><text x="556" y="340" class="label" transform="rotate(-45 556 340)">安全性</text><text x="692" y="340" class="label" transform="rotate(-45 692 340)">検索適合性</text>
+
+    <!-- Weighted Score -->
+    <text x="700" y="60" class="title" fill="#DDA0DD">総合スコア: 4.15/5.0</text>
+  </svg>

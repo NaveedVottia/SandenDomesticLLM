@@ -3,6 +3,7 @@ import { z } from "zod";
 import { mastraPromise } from "../../index";
 import { sessionManager, createSessionContext, updateSessionContext, completeSessionContext } from "../../../utils/session-manager.js";
 import { runSessionAggregatorWorkflow } from "../session-aggregator";
+import { langfuse } from "../../../integrations/langfuse.js";
 
 // Step definitions (must be defined before workflow creation)
 
@@ -619,6 +620,18 @@ export async function runCustomerIdentificationWorkflow(
     if (result.status === 'success' && result.output) {
       const output = result.output;
       console.log(`✅ [Workflow] Completed session ${output.sessionId}, evaluation: ${output.evaluationComplete}`);
+
+      return {
+        response: output.response,
+        success: output.success,
+        sessionId: output.sessionId,
+        evaluationComplete: output.evaluationComplete,
+        aggregationResult: output.aggregationResult
+      };
+    } else if (result.status === 'success' && result.result) {
+      // Fallback: if result.output is missing but result.result exists (from workflow logs)
+      const output = result.result;
+      console.log(`✅ [Workflow] Completed session ${output.sessionId} (fallback), evaluation: ${output.evaluationComplete}`);
 
       return {
         response: output.response,

@@ -1,0 +1,10 @@
+{
+  "inputs": "こんにちは。私はサンデン株式会社の修理サポートアシスタントです。ユーザーの質問に丁寧に日本語でお答えください。",
+  "parameters": {
+    "max_new_tokens": 200,
+    "temperature": 0.6,
+    "do_sample": true,
+    "top_p": 0.9,
+    "repetition_penalty": 1.1
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "testId": "e2e_cust009_conversation",
+  "timestamp": "2025-09-25T01:43:58.939Z",
+  "sessionId": "session_1758764451522_c39ad2bc",
+  "conversationFlow": [
+    {
+      "step": 1,
+      "userInput": "cust009 のアカウントでログインしたいです",
+      "description": "Login with cust009",
+      "intent": "customer_login"
+    },
+    {
+      "step": 2,
+      "userInput": "修理履歴を見せてください",
+      "description": "Ask for repair history",
+      "intent": "repair_history_request"
+    },
+    {
+      "step": 3,
+      "userInput": "所有している製品を確認したい",
+      "description": "Check products",
+      "intent": "product_check"
+    },
+    {
+      "step": 4,
+      "userInput": "修理を依頼したい",
+      "description": "Ask for repairs",
+      "intent": "repair_request"
+    }
+  ],
+  "results": [
+    {
+      "step": 1,
+      "input": "cust009 のアカウントでログインしたいです",
+      "response": "申し訳ありません。ご質問やご要望をお聞かせいただけますでしょうか？サンデン修理サービスへようこそ。どのようなお手伝いができますか？\n\n続けてご質問があれば、お聞かせください。",
+      "success": true,
+      "duration": 2473,
+      "inputTokens": 6,
+      "outputTokens": 22,
+      "sessionId": "session_1758764451522_c39ad2bc"
+    },
+    {
+      "step": 2,
+      "input": "修理履歴を見せてください",
+      "response": "こんにちは。サンデンのカスタマーサポートへようこそ。修理サービスについてのお問い合わせでしょうか？ご用件をお聞かせください。\n\n続けてご質問があれば、お聞かせください。",
+      "success": true,
+      "duration": 2561,
+      "inputTokens": 3,
+      "outputTokens": 21,
+      "sessionId": "session_1758764451522_c39ad2bc"
+    },
+    {
+      "step": 3,
+      "input": "所有している製品を確認したい",
+      "response": "申し訳ございませんが、その選択肢は認識できませんでした。\n\n1. 修理受付・修理履歴・修理予約\n2. 一般的なFAQ\n3. リクエスト送信用オンラインフォーム\n\n番号でお答えください。直接入力も可能です。\n\n続けてご質問があれば、お聞かせください。",
+      "success": true,
+      "duration": 3,
+      "inputTokens": 4,
+      "outputTokens": 31,
+      "sessionId": "session_1758764451522_c39ad2bc"
+    },
+    {
+      "step": 4,
+      "input": "修理を依頼したい",
+      "response": "こんにちは。サンデンのカスタマーサポートへようこそ。修理サービスについてのお問い合わせでしょうか？ご用件をお聞かせください。\n\n続けてご質問があれば、お聞かせください。",
+      "success": true,
+      "duration": 2291,
+      "inputTokens": 2,
+      "outputTokens": 21,
+      "sessionId": "session_1758764451522_c39ad2bc"
+    }
+  ],
+  "summary": {
+    "totalDuration": 187425,
+    "totalSteps": 4,
+    "successfulSteps": 4,
+    "successRate": "100.0%",
+    "tokenUsage": {
+      "input": 15,
+      "output": 95,
+      "total": 110,
+      "averagePerStep": "27.5"
+    },
+    "performance": {
+      "averageResponseTime": 1832,
+      "minResponseTime": 3,
+      "maxResponseTime": 2561
+    }
+  }
+}

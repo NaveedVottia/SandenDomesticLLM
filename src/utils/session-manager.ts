@@ -15,6 +15,8 @@ export interface SessionContext {
   userIntent?: string;
   completed?: boolean;
   lastResponse?: string;
+  lastUserInput?: string;
+  lastInteraction?: string;
   agentInteractions?: number;
   error?: string;
   menuResponse?: string;

@@ -7,11 +7,11 @@ import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 // Import our new evaluation frameworks (from compiled JS)
-import { metricsCollector, startTestTracking, recordFirstToken, startToolTracking, endToolTracking, recordTokens, endTestTracking, getMetricsReport } from './dist/utils/performance-metrics.js';
-import { safetyEvaluator, evaluateSafety, getSafetyReport, getSafetyMetrics } from './dist/utils/safety-evaluator.js';
+import { metricsCollector, startTestTracking, recordFirstToken, startToolTracking, endToolTracking, recordTokens, endTestTracking, getMetricsReport } from '../dist/utils/performance-metrics.js';
+import { safetyEvaluator, evaluateSafety, getSafetyReport, getSafetyMetrics } from '../dist/utils/safety-evaluator.js';
 
 // Import session-aware workflow directly (bypass compilation issues for demo)
-import { runCustomerIdentificationWorkflow } from './src/mastra/workflows/sanden/customer-identification-workflow.ts';
+import { runCustomerIdentificationWorkflow } from '../src/mastra/workflows/sanden/customer-identification-workflow.ts';
 
 // Load test dataset (use the original 20 for now, can expand to 120 later)
 const testPrompts = [
